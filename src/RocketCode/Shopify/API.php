@@ -24,6 +24,8 @@ class API
 
 	/**
 	 * Verifies data returned by OAuth call
+	 * https://help.shopify.com/api/getting-started/authentication/oauth#confirming-installation
+	 *
 	 * @param array|string $data
 	 * @return bool
 	 * @throws \Exception
@@ -58,10 +60,42 @@ class API
 			}
 		}
 
+		//Ensure the provided nonce is the same one that your application provided to Shopify during the Step 2: Asking for permission.
+		if ( \Cache::has($cache_key = $da['shop'].'_nonce') && \Cache::get($cache_key) != $da['state'] )
+		{
+			throw new \Exception('Invalid nonce.');
+		}
+
+		//Ensure the provided hostname parameter is a valid hostname, ends with myshopify.com, and does not contain characters other than letters (a-z), numbers (0-9), dots, and hyphens.
+		if (array_key_exists('shop', $da)) {
+			$validHostnameRegex = '/^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$/';
+			if( ! preg_match($validHostnameRegex, $da['shop']) )
+			{
+				throw new \Exception('Shop parameter is not a valid hostname');
+			}
+
+			if ( substr($da['shop'], -13) != 'myshopify.com' )
+			{
+				throw new \Exception('Shop parameter does not end in myshopify.com');
+			}
+
+			$validShopifyNames = '/^[a-zA-Z0-9.-]+$/';
+			if ( ! preg_match($validShopifyNames, $da['shop']) )
+			{
+				throw new \Exception('Shop parameter is not a valid shopify shop name.');
+			}
+
+		}
+		else
+		{
+			throw new \Exception('Shop parameter missing');
+		}
+
+		//Ensure the provided hmac is valid. The hmac is signed by Shopify as explained below, in the Verification section.
 		if (array_key_exists('hmac', $da))
 		{
 			// HMAC Validation
-			$queryString = http_build_query(array('code' => $da['code'], 'shop' => $da['shop'], 'timestamp' => $da['timestamp']));
+			$queryString = http_build_query(array('code' => $da['code'], 'shop' => $da['shop'], 'state' => $da['state'], 'timestamp' => $da['timestamp']));
 			$match = $da['hmac'];
 			$calculated = hash_hmac('sha256', $queryString, $this->_API['API_SECRET']);
 		}
@@ -85,7 +119,14 @@ class API
 	public function getAccessToken($code = '')
 	{
 		$dta = array('client_id' => $this->_API['API_KEY'], 'client_secret' => $this->_API['API_SECRET'], 'code' => $code);
-		$data = $this->call(['METHOD' => 'POST', 'URL' => 'https://' . $this->_API['SHOP_DOMAIN'] . '/admin/oauth/access_token', 'DATA' => $dta], FALSE);
+
+		$data = $this->call(
+			[
+				'METHOD' => 'POST',
+				'URL' => 'https://' . $this->_API['SHOP_DOMAIN'] . '/admin/oauth/access_token',
+				'DATA' => $dta
+			],
+			FALSE);
 
 		return $data->access_token;
 	}
@@ -98,7 +139,7 @@ class API
 	public function installURL($data = array())
 	{
 		// https://{shop}.myshopify.com/admin/oauth/authorize?client_id={api_key}&scope={scopes}&redirect_uri={redirect_uri}
-		return 'https://' . $this->_API['SHOP_DOMAIN'] . '/admin/oauth/authorize?client_id=' . $this->_API['API_KEY'] . '&scope=' . implode(',', $data['permissions']) . (!empty($data['redirect']) ? '&redirect_uri=' . urlencode($data['redirect']) : '');
+		return 'https://' . $this->_API['SHOP_DOMAIN'] . '/admin/oauth/authorize?client_id=' . $this->_API['API_KEY'] . '&state=' . urlencode($data['state']) . '&scope=' . implode(',', $data['permissions']) . (!empty($data['redirect']) ? '&redirect_uri=' . urlencode($data['redirect']) : '') . (!empty($data['grant_options']) ? '&grant_options[]=' . urlencode($data['grant_options']) : '');
 	}
 
 	/**
@@ -275,13 +316,12 @@ class API
 	    }
 
         curl_setopt_array($ch, $options);
-
         $response = curl_exec($ch);
         $headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
 
-
         // Data returned
         $result = json_decode(substr($response, $headerSize), $request['RETURNARRAY']);
+
 
         // Headers
         $info = array_filter(array_map('trim', explode("\n", substr($response, 0, $headerSize))));
