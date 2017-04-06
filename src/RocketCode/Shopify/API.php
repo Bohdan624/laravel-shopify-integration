@@ -61,7 +61,7 @@ class API
 		}
 
 		//Ensure the provided nonce is the same one that your application provided to Shopify during the Step 2: Asking for permission.
-		if ( \Cache::has($cache_key = $da['shop'].'_nonce') && \Cache::get($cache_key) != $da['state'] )
+		if ( !\Cache::has($cache_key = $da['shop'].'_oauth_state') || \Cache::get($cache_key) != $da['state'] )
 		{
 			throw new \Exception('Invalid nonce.');
 		}
@@ -139,7 +139,9 @@ class API
 	public function installURL($data = array())
 	{
 		// https://{shop}.myshopify.com/admin/oauth/authorize?client_id={api_key}&scope={scopes}&redirect_uri={redirect_uri}
-		return 'https://' . $this->_API['SHOP_DOMAIN'] . '/admin/oauth/authorize?client_id=' . $this->_API['API_KEY'] . '&state=' . urlencode($data['state']) . '&scope=' . implode(',', $data['permissions']) . (!empty($data['redirect']) ? '&redirect_uri=' . urlencode($data['redirect']) : '') . (!empty($data['grant_options']) ? '&grant_options[]=' . urlencode($data['grant_options']) : '');
+        $state = str_random(32);
+        \Cache::put($this->_API['SHOP_DOMAIN'] . '_oauth_state', $state, 60);
+		return 'https://' . $this->_API['SHOP_DOMAIN'] . '/admin/oauth/authorize?client_id=' . $this->_API['API_KEY'] . '&state=' . urlencode($state) . '&scope=' . urlencode(implode(',', $data['permissions'])) . (!empty($data['redirect']) ? '&redirect_uri=' . urlencode($data['redirect']) : '') . (!empty($data['grant_options']) ? '&grant_options[]=' . urlencode($data['grant_options']) : '');
 	}
 
 	/**
@@ -171,7 +173,6 @@ class API
 
 		switch ($key)
 		{
-
 			case 'SHOP_DOMAIN':
 				preg_match('/(https?:\/\/)?(([a-zA-Z0-9\-\.])+)/', $value, $matched);
 				return $matched[2];
