@@ -173,8 +173,8 @@ class API
 		{
 
 			case 'SHOP_DOMAIN':
-				preg_match('/(https?:\/\/)?([a-zA-Z0-9\-\.])+/', $value, $matched);
-				return $matched[0];
+				preg_match('/(https?:\/\/)?(([a-zA-Z0-9\-\.])+)/', $value, $matched);
+				return $matched[2];
 				break;
 
 			default:
