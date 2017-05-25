@@ -6,18 +6,34 @@ An easy-to-use PHP package to communicate with [Shopify's API](http://docs.shopi
 ## Installation
 #### Require rocket-code/shopify in `composer.json`
 
-Add `"rocket-code/shopify"` in your "require" object. With a blank Laravel install, it will look something like this:
+Add this Git repository (`"https://github.com/giact/laravel-shopify-API-wrapper"`) in your "repositories" object (create it if neccesary).
 
-For Laravel 5, use `"rocket-code/shopify": "~2.0"`. For Laravel 4, use `"rocket-code/shopify": "~1.0"`.
+Example:
+
+```
+	"repositories": [
+		{
+			"type": "git",
+			"url": "https://github.com/giact/laravel-shopify-API-wrapper"
+		}
+	]
+```
+
+Add `"rocket-code/shopify"` in your "require" object.  
+To use this branch, use `"rocket-code/shopify": "dev-master"`.
+
+Example:
 
 ```
 	"require": {
-		"laravel/framework": "4.2.*",
-		"rocket-code/shopify": "~1.0"
+		"php": ">=5.6.4",
+		"laravel/framework": "5.4.*",
+		"laravel/tinker": "~1.0",
+		"rocket-code/shopify": "dev-master"
 	}
 ```
 #### Add the Service Provider
-In `app/config/app.php`, add `RocketCode\Shopify\ShopifyServiceProvider` to the end of the `providers` array.
+In `app/config/app.php`, add `RocketCode\Shopify\ShopifyServiceProvider::class,` to the end of the `providers` array.
 
 ## Setting Up
 To begin, use `App::make()` to grab an instance of the `API` class.
