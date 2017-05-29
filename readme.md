@@ -35,6 +35,9 @@ Example:
 #### Add the Service Provider
 In `app/config/app.php`, add `RocketCode\Shopify\ShopifyServiceProvider::class,` to the end of the `providers` array.
 
+#### Add the Middleware
+In `app/http/kernel.php`, add `'shopify.webhook' => \RocketCode\Shopify\VerifyShopifyWebhook::class` to the end of the `$routeMiddleware` array.
+
 ## Setting Up
 To begin, use `App::make()` to grab an instance of the `API` class.
 
