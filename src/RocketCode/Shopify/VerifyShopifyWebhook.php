@@ -15,7 +15,7 @@ class VerifyShopifyWebhook
      */
     public function handle($request, Closure $next)
     {
-        if (self::verify_webhook($request->getContent(), $request->header('HTTP_X_SHOPIFY_HMAC_SHA256'))) {
+        if (self::verify_webhook($request->getContent(), $request->header('X-Shopify-Hmac-Sha256'))) {
             return $next($request);
         } else {
             abort(403, 'Shopify webhook verification failed');
