@@ -376,6 +376,9 @@ class API
 		    }
 		    else
 		    {
+		        if (!is_object($result)) {
+		            $result = new \stdClass();
+                }
 			    $result->_ERROR = $_ERROR;
 			    $result->_INFO = $_INFO;
 		    }
