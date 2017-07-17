@@ -133,16 +133,31 @@ class API
 
 	/**
 	 * Returns a string of the install URL for the app
+     * and optionally stores in the cache some extra data about this store
+     * that will expire together with the nonce
 	 * @param array $data
+     * @param mixed $extraData
 	 * @return string
 	 */
-	public function installURL($data = array())
+	public function installURL($data = array(), $extraData = null)
 	{
 		// https://{shop}.myshopify.com/admin/oauth/authorize?client_id={api_key}&scope={scopes}&redirect_uri={redirect_uri}
         $state = str_random(32);
         \Cache::put($this->_API['SHOP_DOMAIN'] . '_oauth_state', $state, 60);
+        if (!is_null($extraData)) {
+            \Cache::put($this->_API['SHOP_DOMAIN'] . '_extra_data', $extraData, 60);
+        }
 		return 'https://' . $this->_API['SHOP_DOMAIN'] . '/admin/oauth/authorize?client_id=' . $this->_API['API_KEY'] . '&state=' . urlencode($state) . '&scope=' . urlencode(implode(',', $data['permissions'])) . (!empty($data['redirect']) ? '&redirect_uri=' . urlencode($data['redirect']) : '') . (!empty($data['grant_options']) ? '&grant_options[]=' . urlencode($data['grant_options']) : '');
 	}
+
+    /**
+     * Returns the optional extra data stored by installURL()
+     * @return mixed
+     */
+	public function getExtraData()
+    {
+        return \Cache::get($this->_API['SHOP_DOMAIN'] . '_extra_data');
+    }
 
 	/**
 	 * Loops over each of self::$_KEYS, filters provided data, and loads into $this->_API
