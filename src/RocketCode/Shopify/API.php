@@ -388,8 +388,65 @@ class API
 	    {
 		    return $result;
 	    }
+    }
 
+    public function createWebhook($topic, $address) {
+        $this->call([
+            'URL' => '/admin/webhooks.json',
+            'METHOD' => 'POST',
+            'DATA' => [
+                'webhook' => [
+                    'topic' => $topic,
+                    'address' => $address,
+                    'format' => 'json',
+                ]
+            ]
+        ]);
+    }
 
+    public function updateWebhook($id, $address) {
+        $this->call([
+            'URL' => '/admin/webhooks/' . intval($id) . '.json',
+            'METHOD' => 'PUT',
+            'DATA' => [
+                'webhook' => [
+                    'id' => intval($id),
+                    'address' => $address,
+                ]
+            ]
+        ]);
+    }
+
+    public function deleteWebhook($id) {
+        $this->call([
+            'URL' => '/admin/webhooks/' . intval($id) . '.json',
+            'METHOD' => 'DELETE',
+        ]);
+    }
+
+    /**
+     * Make sure the passed webhooks (and only those) are up
+     * @param array $targetWebhooks Array of webhooks in the form [topic => url, ...]
+     *
+     */
+    public function setupWebhooks(array $targetWebhooks) {
+        $call = $this->call([
+            'URL' => '/admin/webhooks.json',
+            'METHOD' => 'GET',
+        ]);
+        foreach ($call->webhooks as $webhook) {
+            if (!array_key_exists($webhook->topic, $targetWebhooks)) {
+                $this->deleteWebhook($webhook->id);
+            } else {
+                if ($webhook->address != $targetWebhooks[$webhook->topic]) {
+                    $this->updateWebhook($webhook->id, $targetWebhooks[$webhook->topic]);
+                }
+                unset($targetWebhooks[$webhook->topic]); // let's remove from $target this webhook that we already processed
+            }
+        }
+        foreach ($targetWebhooks as $topic => $address) {
+            $this->createWebhook($topic, $address);
+        }
     }
 
 } // End of API class
