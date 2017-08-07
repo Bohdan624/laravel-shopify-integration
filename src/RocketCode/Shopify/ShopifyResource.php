@@ -195,7 +195,6 @@ abstract class ShopifyResource implements ShopifyApiUser {
      */
     public function createShopifyResource() {
         $this->shopifyApi()->call([
-
             'URL' => $this->getApiPathMultipleResource(),
             'METHOD' => 'POST',
             'DATA' => [
