@@ -22,6 +22,7 @@ abstract class ShopifyResource implements ShopifyApiUser {
      * @param ShopifyApiUser $parent Whatever owns this resource must have access to the API
      */
     public function __construct(ShopifyApiUser $parent) {
+        $this->shopifyData = [];
         $this->parent = $parent;
     }
 
