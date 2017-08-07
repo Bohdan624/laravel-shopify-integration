@@ -130,6 +130,11 @@ abstract class ShopifyResource implements ShopifyApiUser {
         return isset($this->shopifyData[$propertyName]) ? $this->shopifyData[$propertyName] : $default;
     }
 
+    protected function setShopifyProperty($propertyName, $value) {
+        $this->shopifyData[$propertyName] = $value;
+        // Should we automatically update to Shopify here? Probably not.
+    }
+
     /**
      * Get the Shopify string id of this resource, if it exists
      *
