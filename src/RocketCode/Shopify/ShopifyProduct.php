@@ -2,7 +2,7 @@
 
 namespace RocketCode\Shopify;
 
-class ShopifyProduct extends ShopifyResource {
+class ShopifyProduct extends ShopifyResourceWithMetafields {
 
     public static function getResourceSingularName()
     {
