@@ -1,6 +1,8 @@
 <?php
 
 namespace RocketCode\Shopify;
+use \stdClass;
+use \Exception;
 
 abstract class ShopifyResource implements ShopifyApiUser {
     /**
@@ -22,7 +24,7 @@ abstract class ShopifyResource implements ShopifyApiUser {
      * @param ShopifyApiUser $parent Whatever owns this resource must have access to the API
      */
     public function __construct(ShopifyApiUser $parent) {
-        $this->shopifyData = [];
+        $this->shopifyData = new stdClass;
         $this->parent = $parent;
     }
 
@@ -79,18 +81,15 @@ abstract class ShopifyResource implements ShopifyApiUser {
      * Set the resource's data object according to the data type passed as $value
      * (and make sure it's valid JSON if it's a string)
      *
-     * @param mixed $value
+     * @param stdClass|string $data
      * @return void
      */
-    public function setShopifyData($value) {
-        if (is_string($value)) {
-            $data = self::jsonDecode($value);
-        } else {
-            $data = $value;
+    public function setShopifyData($data) {
+        if (is_string($data)) {
+            $data = self::jsonDecode($data);
         }
-        if (is_object($data) || is_array($data)) {
-            $data = (array) $data;
-            if (isset($data[static::getResourceSingularName()])) {
+        if (is_object($data)) {
+            if (isset($data->{static::getResourceSingularName()})) {
                 /*
                  * If we received data in the form:
                  * {
@@ -100,13 +99,13 @@ abstract class ShopifyResource implements ShopifyApiUser {
                  * }
                  * we'll extract the resource object (in this example, product)
                  */
-                $this->shopifyData = $data[static::getResourceSingularName()];
+                $this->shopifyData = $data->{static::getResourceSingularName()};
             } else {
                 // otherwise let's assume we got the resource object directly
                 $this->shopifyData = $data;
             }
         } else {
-            throw new Exception('The Shopify data received was neither an object nor an array');
+            throw new Exception('The Shopify data received was not an object');
         }
     }
 
@@ -115,7 +114,7 @@ abstract class ShopifyResource implements ShopifyApiUser {
      *
      * @return string
      */
-    public function getShopifyJson() {
+    public function getJsonData() {
         return self::jsonEncode($this->shopifyData);
     }
 
@@ -127,11 +126,11 @@ abstract class ShopifyResource implements ShopifyApiUser {
      * @return mixed
      */
     public function getShopifyProperty($propertyName, $default = null) {
-        return isset($this->shopifyData[$propertyName]) ? $this->shopifyData[$propertyName] : $default;
+        return isset($this->shopifyData->{$propertyName}) ? $this->shopifyData->{$propertyName} : $default;
     }
 
     protected function setShopifyProperty($propertyName, $value) {
-        $this->shopifyData[$propertyName] = $value;
+        $this->shopifyData->{$propertyName} = $value;
         // Should we automatically update to Shopify here? Probably not.
     }
 
