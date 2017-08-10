@@ -246,7 +246,7 @@ abstract class ShopifyResource implements ShopifyApiUser {
      * @param ShopifyApiUser $parent
      * @return array
      */
-    public static function getShopifyResources(ShopifyApiUser $parent) {
+    public static function listShopifyResources(ShopifyApiUser $parent) {
         return $parent->getShopifyApi()->call([
             'URL' => $parent->getSpecificPath() . '/' . static::getResourcePluralName() . '.json',
             'METHOD' => 'GET',
