@@ -45,6 +45,8 @@ abstract class ShopifyResourceWithMetafields extends ShopifyResource {
     }
 
     /**
+     * Sets a metafield value (but doesn't save it right away to the Shopify API)
+     *
      * @param string $namespace
      * @param string $key
      * @param $value
@@ -57,7 +59,6 @@ abstract class ShopifyResourceWithMetafields extends ShopifyResource {
             $metafield = new ShopifyMetafield($this, $namespace, $key, $value);
             $this->metafields[ShopifyMetafield::buildFullKey($namespace, $key)] = $metafield;
         }
-        $metafield->saveShopifyResource(); // save right away to Shopify API
     }
 
     /**
