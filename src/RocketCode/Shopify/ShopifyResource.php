@@ -11,7 +11,7 @@ abstract class ShopifyResource implements ShopifyApiUser {
     protected $shopifyData;
 
     /**
-     * The resource's shopify "API user" (i.e. object that knows the domain and access token)
+     * The resource's parent (it's an "API user" i.e. object that knows the domain and access token)
      *
      * @var ShopifyApiUser
      */
@@ -186,15 +186,15 @@ abstract class ShopifyResource implements ShopifyApiUser {
     /**
      * Get the Shopify API object for the shop associated to this resource
      */
-    public function shopifyApi() {
-        return $this->parent->ShopifyAPI();
+    public function getShopifyApi() {
+        return $this->parent->getShopifyApi();
     }
 
     /**
      * Calls the Shopify API to create this resource
      */
     public function createShopifyResource() {
-        $this->shopifyApi()->call([
+        $this->getShopifyApi()->call([
             'URL' => $this->getApiPathMultipleResource(),
             'METHOD' => 'POST',
             'DATA' => [
@@ -212,7 +212,7 @@ abstract class ShopifyResource implements ShopifyApiUser {
      * Calls the Shopify API to update this resource
      */
     public function updateShopifyResource() {
-        $this->shopifyApi()->call([
+        $this->getShopifyApi()->call([
             'URL' => $this->getApiPathSingleResource(),
             'METHOD' => 'PUT',
             'DATA' => [
@@ -225,7 +225,7 @@ abstract class ShopifyResource implements ShopifyApiUser {
      * Calls the Shopify API to delete this resource
      */
     public function deleteShopifyResource() {
-        $this->shopifyApi()->call([
+        $this->getShopifyApi()->call([
             'URL' => $this->getApiPathSingleResource(),
             'METHOD' => 'DELETE',
         ]);
@@ -248,7 +248,7 @@ abstract class ShopifyResource implements ShopifyApiUser {
      * @return array
      */
     public static function getShopifyResources(ShopifyApiUser $parent) {
-        return $parent->shopifyApi()->call([
+        return $parent->getShopifyApi()->call([
             'URL' => $parent->getSpecificPath() . '/' . static::getResourcePluralName() . '.json',
             'METHOD' => 'GET',
         ]);

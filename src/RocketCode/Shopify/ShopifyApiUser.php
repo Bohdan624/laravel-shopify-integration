@@ -3,7 +3,7 @@
 namespace RocketCode\Shopify;
 
 /**
- * This interface should be implemented using the trait UsesShopifyApi
+ * This interface can be implemented with the trait UsesShopifyApi
  */
 interface ShopifyApiUser extends ShopifyURL {
     /**
@@ -11,5 +11,5 @@ interface ShopifyApiUser extends ShopifyURL {
      *
      * @return \RocketCode\Shopify\API
      */
-    public function ShopifyAPI();
+    public function getShopifyApi();
 }

@@ -11,7 +11,7 @@ trait UsesShopifyApi {
      *
      * @return \RocketCode\Shopify\API
      */
-    public function ShopifyAPI() {
+    public function getShopifyApi() {
         static $api;
         if (!($api instanceof API)) {
             $api = new API([
