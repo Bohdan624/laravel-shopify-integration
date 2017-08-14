@@ -20,12 +20,31 @@ abstract class ShopifyResource implements ShopifyApiUser {
     protected $parent;
 
     /**
+     * The resource's children
+     *
+     * @var ShopifyApiUser
+     */
+    protected $children;
+
+    public function addChild(ShopifyResource $child) {
+        $this->children[] = $child;
+    }
+
+    /**
      * ShopifyResource constructor.
      * @param ShopifyApiUser $parent Whatever owns this resource must have access to the API
+     * @param stdClass $shopifyData
      */
-    public function __construct(ShopifyApiUser $parent) {
-        $this->shopifyData = new stdClass;
+    public function __construct(ShopifyApiUser $parent, stdClass $shopifyData) {
+        $this->children = [];
         $this->parent = $parent;
+        if ($this->parent instanceof self) {
+            $this->parent->addChild($this);
+        }
+        if (!$shopifyData) {
+            $shopifyData = new stdClass();
+        }
+        $this->setShopifyData($shopifyData);
     }
 
     /**
@@ -59,7 +78,7 @@ abstract class ShopifyResource implements ShopifyApiUser {
      * @param $data
      * @return string
      */
-    protected static function jsonEncode($data) {
+    public static function jsonEncode($data) {
         $json = json_encode($data);
         self::checkJsonError();
         return $json;
@@ -71,42 +90,38 @@ abstract class ShopifyResource implements ShopifyApiUser {
      * @param $json
      * @return mixed
      */
-    protected static function jsonDecode($json) {
+    public static function jsonDecode($json) {
         $data = json_decode($json);
         self::checkJsonError();
         return $data;
     }
 
     /**
-     * Set the resource's data object according to the data type passed as $value
-     * (and make sure it's valid JSON if it's a string)
+     * Set the resource's data object
      *
-     * @param stdClass|string $data
+     * @param stdClass $data
      * @return void
      */
-    public function setShopifyData($data) {
-        if (is_string($data)) {
-            $data = self::jsonDecode($data);
-        }
-        if (is_object($data)) {
-            if (isset($data->{static::getResourceSingularName()})) {
-                /*
-                 * If we received data in the form:
-                 * {
-                 *   "product": {
-                 *     ...
-                 *   }
-                 * }
-                 * we'll extract the resource object (in this example, product)
-                 */
-                $this->shopifyData = $data->{static::getResourceSingularName()};
-            } else {
-                // otherwise let's assume we got the resource object directly
-                $this->shopifyData = $data;
-            }
+    public function setShopifyData(stdClass $data) {
+        if (isset($data->{static::getResourceSingularName()})) {
+            /*
+             * If we received data in the form:
+             * {
+             *   "product": {
+             *     ...
+             *   }
+             * }
+             * we'll extract the resource object (in this example, product)
+             */
+            $this->shopifyData = $data->{static::getResourceSingularName()};
         } else {
-            throw new Exception('The Shopify data received was not an object');
+            // otherwise let's assume we got the resource object directly
+            $this->shopifyData = $data;
         }
+    }
+
+    public function setShopifyDataFromJson($jsonData) {
+        $this->setShopifyData(self::jsonDecode($jsonData));
     }
 
     /**
@@ -190,9 +205,17 @@ abstract class ShopifyResource implements ShopifyApiUser {
     }
 
     /**
+     * Event method that gets called before committing data to Shopify
+     */
+    protected function saving() {
+        // This will get reimplemented by children when necessary
+    }
+
+    /**
      * Calls the Shopify API to create this resource
      */
     public function createShopifyResource() {
+        $this->saving();
         $this->getShopifyApi()->call([
             'URL' => $this->getApiPathMultipleResource(),
             'METHOD' => 'POST',
@@ -211,6 +234,7 @@ abstract class ShopifyResource implements ShopifyApiUser {
      * Calls the Shopify API to update this resource
      */
     public function updateShopifyResource() {
+        $this->saving();
         $this->getShopifyApi()->call([
             'URL' => $this->getApiPathSingleResource(),
             'METHOD' => 'PUT',

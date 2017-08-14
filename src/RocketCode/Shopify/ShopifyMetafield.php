@@ -2,11 +2,12 @@
 
 namespace RocketCode\Shopify;
 
+use \stdClass;
 
 class ShopifyMetafield extends ShopifyResource {
-    public function __construct(ShopifyApiUser $parent, $namespace = null, $key = null, $value = '')
+    public function __construct(ShopifyApiUser $parent, $shopifyData, $namespace = null, $key = null, $value = '')
     {
-        parent::__construct($parent);
+        parent::__construct($parent, $shopifyData);
         if ($namespace && $key) {
             $this->setShopifyProperty('namespace', $namespace);
             $this->setShopifyProperty('key', $key);
@@ -55,5 +56,12 @@ class ShopifyMetafield extends ShopifyResource {
             $this->setShopifyProperty('value_type', 'string');
         }
         return $this->setShopifyProperty('value', $value);
+    }
+
+    /***
+     * @return stdClass
+     */
+    public function getShopifyData() {
+        return $this->shopifyData;
     }
 }

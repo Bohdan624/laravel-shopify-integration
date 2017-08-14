@@ -7,14 +7,13 @@ abstract class ShopifyResourceWithMetafields extends ShopifyResource {
     protected $metafields;
 
     /**
-     * @return array
+     * @return ShopifyMetafield[]
      */
     protected function getMetafields() {
         if (!isset($this->metafields)) {
             $this->metafields = [];
             foreach (ShopifyMetafield::listShopifyResources($this)->metafields as $metafield_data) {
-                $metafield = new ShopifyMetafield($this);
-                $metafield->setShopifyData($metafield_data);
+                $metafield = new ShopifyMetafield($this, $metafield_data);
                 $this->metafields[$metafield->getFullKey()] = $metafield;
             }
         }
@@ -56,7 +55,7 @@ abstract class ShopifyResourceWithMetafields extends ShopifyResource {
         if ($metafield) { // if we have found that metafield resource
             $metafield->setValue($value);
         } else { // we have not found that metafield resource
-            $metafield = new ShopifyMetafield($this, $namespace, $key, $value);
+            $metafield = new ShopifyMetafield($this, new \stdClass(), $namespace, $key, $value);
             $this->metafields[ShopifyMetafield::buildFullKey($namespace, $key)] = $metafield;
         }
     }
@@ -69,6 +68,21 @@ abstract class ShopifyResourceWithMetafields extends ShopifyResource {
         if ($metafield = $this->getMetafield($namespace, $key)) {
             unset($this->metafields[$metafield->getFullKey()]);
             $metafield->deleteShopifyResource();
+        }
+    }
+
+    /**
+     *  Event method that gets called before committing data to Shopify
+     */
+    protected function saving()
+    {
+        /*
+         * Compile the "metafields" property within the data object so that all the metafields
+         * retrieved so far will get saved together with their parent object (i.e. $this)
+         */
+        $this->shopifyData->metafields = [];
+        foreach ($this->getMetafields() as $metafield) {
+            $this->shopifyData->metafields[] = $metafield->getShopifyData();
         }
     }
 }
