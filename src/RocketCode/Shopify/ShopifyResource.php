@@ -5,6 +5,8 @@ use \stdClass;
 use \Exception;
 
 abstract class ShopifyResource implements ShopifyApiUser {
+    const FACTORY = ShopifyFactory::class;
+
     /**
      * The resource's shopify data object
      *
@@ -48,18 +50,16 @@ abstract class ShopifyResource implements ShopifyApiUser {
     }
 
     /**
-     * This method must return the singular name for this type of resource
-     * E.g. "product", "image"
-     * @return string
+     * @param ShopifyApiUser $parent
+     * @param $type
+     * @param stdClass $data
+     * @return ShopifyResource
      */
-    abstract public static function getResourceSingularName();
-
-    /**
-     * This method must return the plural name for this type of resource
-     * E.g. "products", "images"
-     * @return string
-     */
-    abstract public static function getResourcePluralName();
+    public static function newShopifyResource(ShopifyApiUser $parent, $type, stdClass $data)
+    {
+        $temp = (static::FACTORY)::newShopifyResource($parent, $type, $data);
+        return $temp;
+    }
 
     /**
      * Checks if the last PHP json function call returned an error, and if so throw an exception

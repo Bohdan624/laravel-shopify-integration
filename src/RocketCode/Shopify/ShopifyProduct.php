@@ -2,15 +2,10 @@
 
 namespace RocketCode\Shopify;
 
-class ShopifyProduct extends ShopifyResourceWithMetafields {
+class ShopifyProduct extends ShopifyResourceWithMetafields
+{
+    use HasNames;
 
-    public static function getResourceSingularName()
-    {
-        return 'product';
-    }
-
-    public static function getResourcePluralName()
-    {
-        return 'products';
-    }
+    const SINGULAR_NAME = 'product';
+    const PLURAL_NAME = 'products';
 }
