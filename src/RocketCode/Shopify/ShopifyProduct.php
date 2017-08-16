@@ -8,4 +8,6 @@ class ShopifyProduct extends ShopifyResourceWithMetafields
 
     const SINGULAR_NAME = 'product';
     const PLURAL_NAME = 'products';
+
+    const CHILDREN = ['variants', 'images'];
 }

@@ -5,7 +5,7 @@ use \stdClass;
 use \Exception;
 
 abstract class ShopifyResource implements ShopifyApiUser {
-    const FACTORY = ShopifyFactory::class;
+    const CHILDREN = [];
 
     /**
      * The resource's shopify data object
@@ -49,15 +49,20 @@ abstract class ShopifyResource implements ShopifyApiUser {
         $this->setShopifyData($shopifyData);
     }
 
+    protected static function getFactory()
+    {
+        return ShopifyFactory::class;
+    }
+
     /**
      * @param ShopifyApiUser $parent
      * @param $type
      * @param stdClass $data
      * @return ShopifyResource
      */
-    public static function newShopifyResource(ShopifyApiUser $parent, $type, stdClass $data)
+    protected function newShopifyResource($type, stdClass $data)
     {
-        $temp = (static::FACTORY)::newShopifyResource($parent, $type, $data);
+        $temp = (static::getFactory())::newShopifyResource($this, $type, $data);
         return $temp;
     }
 
@@ -96,6 +101,22 @@ abstract class ShopifyResource implements ShopifyApiUser {
         return $data;
     }
 
+    protected function populateChildrenGroup($groupName)
+    {
+        if (isset($this->shopifyData->$groupName) && is_array($this->shopifyData->$groupName)) {
+            foreach ($this->shopifyData->$groupName as $childData) {
+                $this->newShopifyResource($groupName, $childData);
+            }
+        }
+    }
+
+    protected function populateChildren()
+    {
+        foreach (static::CHILDREN as $groupName) {
+            $this->populateChildrenGroup($groupName);
+        }
+    }
+
     /**
      * Set the resource's data object
      *
@@ -118,6 +139,7 @@ abstract class ShopifyResource implements ShopifyApiUser {
             // otherwise let's assume we got the resource object directly
             $this->shopifyData = $data;
         }
+        $this->populateChildren();
     }
 
     public function setShopifyDataFromJson($jsonData) {
