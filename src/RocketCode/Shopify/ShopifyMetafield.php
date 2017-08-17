@@ -5,6 +5,11 @@ namespace RocketCode\Shopify;
 use \stdClass;
 
 class ShopifyMetafield extends ShopifyResource {
+    use HasNames;
+
+    const SINGULAR_NAME = 'metafield';
+    const PLURAL_NAME = 'metafields';
+
     public function __construct(ShopifyApiUser $parent, $shopifyData, $namespace = null, $key = null, $value = '')
     {
         parent::__construct($parent, $shopifyData);
@@ -13,16 +18,6 @@ class ShopifyMetafield extends ShopifyResource {
             $this->setShopifyProperty('key', $key);
             $this->setValue($value);
         }
-    }
-
-    public static function getResourceSingularName()
-    {
-        return 'metafield';
-    }
-
-    public static function getResourcePluralName()
-    {
-        return 'metafields';
     }
 
     public function getNamespace() {
