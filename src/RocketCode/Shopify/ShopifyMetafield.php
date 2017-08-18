@@ -60,6 +60,12 @@ class ShopifyMetafield extends ShopifyResource {
         return $this->shopifyData;
     }
 
+    /**
+     * Overriding the parent method because image metafields need a non-standard URLs to be listed
+     *
+     * @param ShopifyApiUser $parent
+     * @return array
+     */
     public static function listShopifyResources(ShopifyApiUser $parent)
     {
         if ($parent instanceof ShopifyImage) {
@@ -72,5 +78,10 @@ class ShopifyMetafield extends ShopifyResource {
         }
     }
 
-
+    /*
+     * TODO: we should probably override createShopifyResource(), updateShopifyResource() and deleteShopifyResource()
+     * because metafields behave differently:
+     * - actual creation and update is handled by their parent object
+     * - deletion for image metafields requires /admin/metafields (such endpoint can be used to delete all metafields)
+     */
 }
