@@ -8,4 +8,8 @@ class ShopifyImage extends ShopifyResourceWithMetafields
 
     const SINGULAR_NAME = 'image';
     const PLURAL_NAME = 'images';
+
+    public function getSrc() {
+        return $this->getShopifyProperty('src');
+    }
 }
