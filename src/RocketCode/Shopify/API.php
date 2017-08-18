@@ -9,6 +9,7 @@ class API
 	private $_API = array();
 	private static $_KEYS = array('API_KEY', 'API_SECRET', 'ACCESS_TOKEN', 'SHOP_DOMAIN');
 
+	const PREFIX = '/admin';
 
 	/**
 	 * Checks for presence of setup $data array and loads
@@ -123,7 +124,7 @@ class API
 		$data = $this->call(
 			[
 				'METHOD' => 'POST',
-				'URL' => 'https://' . $this->_API['SHOP_DOMAIN'] . '/admin/oauth/access_token',
+				'URL' => 'https://' . $this->_API['SHOP_DOMAIN'] . self::PREFIX . '/oauth/access_token',
 				'DATA' => $dta
 			],
 			FALSE);
@@ -147,7 +148,7 @@ class API
         if (!is_null($extraData)) {
             \Cache::put($this->_API['SHOP_DOMAIN'] . '_extra_data', $extraData, 60);
         }
-		return 'https://' . $this->_API['SHOP_DOMAIN'] . '/admin/oauth/authorize?client_id=' . $this->_API['API_KEY'] . '&state=' . urlencode($state) . '&scope=' . urlencode(implode(',', $data['permissions'])) . (!empty($data['redirect']) ? '&redirect_uri=' . urlencode($data['redirect']) : '') . (!empty($data['grant_options']) ? '&grant_options[]=' . urlencode($data['grant_options']) : '');
+		return 'https://' . $this->_API['SHOP_DOMAIN'] . self::PREFIX . '/oauth/authorize?client_id=' . $this->_API['API_KEY'] . '&state=' . urlencode($state) . '&scope=' . urlencode(implode(',', $data['permissions'])) . (!empty($data['redirect']) ? '&redirect_uri=' . urlencode($data['redirect']) : '') . (!empty($data['grant_options']) ? '&grant_options[]=' . urlencode($data['grant_options']) : '');
 	}
 
     /**
@@ -392,7 +393,7 @@ class API
 
     public function createWebhook($topic, $address) {
         $this->call([
-            'URL' => '/admin/webhooks.json',
+            'URL' => self::PREFIX . '/webhooks.json',
             'METHOD' => 'POST',
             'DATA' => [
                 'webhook' => [
@@ -406,7 +407,7 @@ class API
 
     public function updateWebhook($id, $address) {
         $this->call([
-            'URL' => '/admin/webhooks/' . intval($id) . '.json',
+            'URL' => self::PREFIX . '/webhooks/' . intval($id) . '.json',
             'METHOD' => 'PUT',
             'DATA' => [
                 'webhook' => [
@@ -419,7 +420,7 @@ class API
 
     public function deleteWebhook($id) {
         $this->call([
-            'URL' => '/admin/webhooks/' . intval($id) . '.json',
+            'URL' => self::PREFIX . '/webhooks/' . intval($id) . '.json',
             'METHOD' => 'DELETE',
         ]);
     }
@@ -431,7 +432,7 @@ class API
      */
     public function setupWebhooks(array $targetWebhooks) {
         $call = $this->call([
-            'URL' => '/admin/webhooks.json',
+            'URL' => self::PREFIX . '/webhooks.json',
             'METHOD' => 'GET',
         ]);
         foreach ($call->webhooks as $webhook) {

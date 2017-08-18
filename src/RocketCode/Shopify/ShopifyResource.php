@@ -196,7 +196,7 @@ abstract class ShopifyResource implements ShopifyApiUser {
      * @return string
      */
     public function getApiPathSingleResource() {
-        return static::getSpecificPath() . '.json';
+        return $this->getSpecificPath() . '.json';
     }
 
     /**
@@ -206,7 +206,7 @@ abstract class ShopifyResource implements ShopifyApiUser {
      * @return string
      */
     public function getApiPathMultipleResource() {
-        return static::getGenericPath() . '.json';
+        return $this->getGenericPath() . '.json';
     }
 
     /**
@@ -239,7 +239,7 @@ abstract class ShopifyResource implements ShopifyApiUser {
     public function createShopifyResource() {
         $this->saving();
         $this->getShopifyApi()->call([
-            'URL' => $this->getApiPathMultipleResource(),
+            'URL' => API::PREFIX . $this->getApiPathMultipleResource(),
             'METHOD' => 'POST',
             'DATA' => [
                 /*
@@ -258,7 +258,7 @@ abstract class ShopifyResource implements ShopifyApiUser {
     public function updateShopifyResource() {
         $this->saving();
         $this->getShopifyApi()->call([
-            'URL' => $this->getApiPathSingleResource(),
+            'URL' => API::PREFIX . $this->getApiPathSingleResource(),
             'METHOD' => 'PUT',
             'DATA' => [
                 static::getResourceSingularName() => $this->shopifyData
@@ -271,7 +271,7 @@ abstract class ShopifyResource implements ShopifyApiUser {
      */
     public function deleteShopifyResource() {
         $this->getShopifyApi()->call([
-            'URL' => $this->getApiPathSingleResource(),
+            'URL' => API::PREFIX . $this->getApiPathSingleResource(),
             'METHOD' => 'DELETE',
         ]);
     }
@@ -294,7 +294,7 @@ abstract class ShopifyResource implements ShopifyApiUser {
      */
     public static function listShopifyResources(ShopifyApiUser $parent) {
         return $parent->getShopifyApi()->call([
-            'URL' => $parent->getSpecificPath() . '/' . static::getResourcePluralName() . '.json',
+            'URL' => API::PREFIX . $parent->getSpecificPath() . '/' . static::getResourcePluralName() . '.json',
             'METHOD' => 'GET',
         ]);
     }
