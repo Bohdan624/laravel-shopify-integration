@@ -59,4 +59,18 @@ class ShopifyMetafield extends ShopifyResource {
     public function getShopifyData() {
         return $this->shopifyData;
     }
+
+    public static function listShopifyResources(ShopifyApiUser $parent)
+    {
+        if ($parent instanceof ShopifyImage) {
+            return $parent->getShopifyApi()->call([
+                'URL' => API::PREFIX . '/metafields.json?metafield[owner_id]=' . $parent->getShopifyId() . '&metafield[owner_resource]=product_image',
+                'METHOD' => 'GET',
+            ]);
+        } else {
+            return parent::listShopifyResources($parent);
+        }
+    }
+
+
 }
