@@ -6,22 +6,23 @@ namespace RocketCode\Shopify;
  * This trait should be used to implement the interface ShopifyApiUser
  */
 trait UsesShopifyApi {
+    protected $api;
+
     /**
      * Get the Shopify API object to query Shopify
      *
      * @return \RocketCode\Shopify\API
      */
     public function getShopifyApi() {
-        static $api;
-        if (!($api instanceof API)) {
-            $api = new API([
+        if (!($this->api instanceof API)) {
+            $this->api = new API([
                 'API_KEY' => env('SHOPIFY_APP_ID'),
                 'API_SECRET' => env('SHOPIFY_APP_SECRET'),
                 'SHOP_DOMAIN' => $this->getDomain(),
                 'ACCESS_TOKEN' => $this->getAccessToken(),
             ]);
         }
-        return $api;
+        return $this->api;
     }
 
     /**
