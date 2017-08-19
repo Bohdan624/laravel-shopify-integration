@@ -12,8 +12,7 @@ abstract class ShopifyResourceWithMetafields extends ShopifyResource {
     protected function getMetafields() {
         if (!isset($this->metafields)) {
             $this->metafields = [];
-            foreach (ShopifyMetafield::listShopifyResources($this)->metafields as $metafield_data) {
-                $metafield = new ShopifyMetafield($this, $metafield_data);
+            foreach (ShopifyMetafield::newShopifyResourceList($this) as $metafield) {
                 $this->metafields[$metafield->getFullKey()] = $metafield;
             }
         }

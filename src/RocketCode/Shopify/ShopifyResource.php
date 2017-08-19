@@ -288,14 +288,31 @@ abstract class ShopifyResource implements ShopifyApiUser {
     }
 
     /**
-     * Get an array of the resources of this particular type belonging to $parent
+     * Get an array of data for the resources of this particular type belonging to $parent
+     *
      * @param ShopifyApiUser $parent
-     * @return array
+     * @return stdClass[]
      */
     public static function listShopifyResources(ShopifyApiUser $parent) {
         return $parent->getShopifyApi()->call([
             'URL' => API::PREFIX . $parent->getSpecificPath() . '/' . static::getResourcePluralName() . '.json',
             'METHOD' => 'GET',
         ]);
+    }
+
+    /**
+     * Get an array of shopify resource objects of this particular type belonging to $parent
+     *
+     * @param ShopifyApiUser $parent
+     * @return ShopifyResource[]
+     */
+    public static function newShopifyResourceList(ShopifyApiUser $parent)
+    {
+        $list = [];
+        foreach (static::listShopifyResources($parent)->{static::getResourcePluralName()} as $resource_data) {
+            $resource = new static($parent, $resource_data);
+            $list[] = $resource;
+        }
+        return $list;
     }
 }
