@@ -171,6 +171,27 @@ abstract class ShopifyResource implements ShopifyApiUser {
         // Should we automatically update to Shopify here? Probably not.
     }
 
+    protected function unsetShopifyProperty($propertyName)
+    {
+        if (isset($this->shopifyData->{$propertyName})) {
+            unset($this->shopifyData->{$propertyName});
+        }
+    }
+
+    /**
+     * If $value is null, unset $propertyName, otherwise if the property is set, set it to $value
+     *
+     * @param $propertyName
+     * @param $value
+     */
+    public function resetShopifyProperty($propertyName, $value) {
+        if (is_null($value)) {
+            $this->unsetShopifyProperty($propertyName);
+        } else if (isset($this->shopifyData->{$propertyName})) {
+            $this->setShopifyProperty($propertyName, $value);
+        }
+    }
+
     /**
      * Get the Shopify string id of this resource, if it exists
      *
