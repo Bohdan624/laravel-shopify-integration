@@ -185,7 +185,11 @@ abstract class ShopifyResource implements ShopifyApiUser {
     }
 
     public function getSpecificPath() {
-        return $this->parent->getSpecificPath() . '/' . static::getResourcePluralName() . '/' . $this->getShopifyId();
+        if ($this->getShopifyId()) {
+            return $this->parent->getSpecificPath() . '/' . static::getResourcePluralName() . '/' . $this->getShopifyId();
+        } else {
+            throw new ShopifyNoIdException();
+        }
     }
 
 
@@ -294,10 +298,16 @@ abstract class ShopifyResource implements ShopifyApiUser {
      * @return stdClass[]
      */
     public static function listShopifyResources(ShopifyApiUser $parent) {
-        return $parent->getShopifyApi()->call([
-            'URL' => API::PREFIX . $parent->getSpecificPath() . '/' . static::getResourcePluralName() . '.json',
-            'METHOD' => 'GET',
-        ]);
+        try {
+            return $parent->getShopifyApi()->call([
+                'URL' => API::PREFIX . $parent->getSpecificPath() . '/' . static::getResourcePluralName() . '.json',
+                'METHOD' => 'GET',
+            ]);
+        } catch (ShopifyNoIdException $e) {
+            $object = new stdClass();
+            $object->{static::getResourcePluralName()} = [];
+            return $object;
+        }
     }
 
     /**
