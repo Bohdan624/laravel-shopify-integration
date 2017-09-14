@@ -24,7 +24,7 @@ abstract class ShopifyResource implements ShopifyApiUser {
     /**
      * The resource's children
      *
-     * @var ShopifyApiUser
+     * @var ShopifyResource[]
      */
     protected $children;
 
@@ -103,7 +103,7 @@ abstract class ShopifyResource implements ShopifyApiUser {
 
     protected function populateChildrenGroup($groupName)
     {
-        if (isset($this->shopifyData->$groupName) && is_array($this->shopifyData->$groupName)) {
+        if ($this->existsShopifyProperty($groupName) && is_array($this->shopifyData->$groupName)) {
             foreach ($this->shopifyData->$groupName as $childData) {
                 $this->newShopifyResource($groupName, $childData);
             }
@@ -163,7 +163,7 @@ abstract class ShopifyResource implements ShopifyApiUser {
      * @return mixed
      */
     public function getShopifyProperty($propertyName, $default = null) {
-        return isset($this->shopifyData->{$propertyName}) ? $this->shopifyData->{$propertyName} : $default;
+        return $this->existsShopifyProperty($propertyName) ? $this->shopifyData->{$propertyName} : $default;
     }
 
     protected function setShopifyProperty($propertyName, $value) {
@@ -171,9 +171,20 @@ abstract class ShopifyResource implements ShopifyApiUser {
         // Should we automatically update to Shopify here? Probably not.
     }
 
+    /**
+     * Check if the given property exists
+     *
+     * @param string $propertyName
+     * @return bool
+     */
+    public function existsShopifyProperty($propertyName)
+    {
+        return property_exists($this->shopifyData, $propertyName);
+    }
+
     protected function unsetShopifyProperty($propertyName)
     {
-        if (isset($this->shopifyData->{$propertyName})) {
+        if ($this->existsShopifyProperty($propertyName)) {
             unset($this->shopifyData->{$propertyName});
         }
     }
@@ -187,7 +198,7 @@ abstract class ShopifyResource implements ShopifyApiUser {
     public function resetShopifyProperty($propertyName, $value) {
         if (is_null($value)) {
             $this->unsetShopifyProperty($propertyName);
-        } else if (isset($this->shopifyData->{$propertyName})) {
+        } else if ($this->existsShopifyProperty($propertyName)) {
             $this->setShopifyProperty($propertyName, $value);
         }
     }
