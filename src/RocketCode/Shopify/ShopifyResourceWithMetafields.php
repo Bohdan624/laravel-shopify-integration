@@ -70,6 +70,11 @@ abstract class ShopifyResourceWithMetafields extends ShopifyResource {
         }
     }
 
+    protected function savingMetafield(ShopifyMetafield $metafield)
+    {
+        $this->shopifyData->metafields[] = $metafield->getShopifyData();
+    }
+
     /**
      *  Event method that gets called before committing data to Shopify
      */
@@ -81,7 +86,7 @@ abstract class ShopifyResourceWithMetafields extends ShopifyResource {
          */
         $this->shopifyData->metafields = [];
         foreach ($this->getMetafields() as $metafield) {
-            $this->shopifyData->metafields[] = $metafield->getShopifyData();
+            $this->savingMetafield($metafield);
         }
     }
 }
