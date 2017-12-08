@@ -343,12 +343,12 @@ abstract class ShopifyResource implements ShopifyApiUser {
     }
 
     /**
-     * Get an array of shopify resource objects of this particular type belonging to $parent
+     * Retrieve an array of shopify resource objects of this particular type belonging to $parent
      *
      * @param ShopifyApiUser $parent
      * @return ShopifyResource[]
      */
-    public static function newShopifyResourceList(ShopifyApiUser $parent)
+    public static function pullShopifyResourceList(ShopifyApiUser $parent)
     {
         $list = [];
         foreach (static::listShopifyResources($parent)->{static::getResourcePluralName()} as $resource_data) {
@@ -356,5 +356,43 @@ abstract class ShopifyResource implements ShopifyApiUser {
             $list[] = $resource;
         }
         return $list;
+    }
+
+    /**
+     * Kept for backward compatibility
+     *
+     * @param ShopifyApiUser $parent
+     * @return ShopifyResource[]
+     */
+    public static function newShopifyResourceList(ShopifyApiUser $parent)
+    {
+        return static::pullShopifyResourceList($parent);
+    }
+
+    /**
+     * Retrieve a single shopify resource data of this particular type belonging to $parent
+     *
+     * @param ShopifyApiUser $parent
+     * @param string $id
+     * @return stdClass
+     */
+    public static function pullShopifyResourceDataById(ShopifyApiUser $parent, $id)
+    {
+        return $parent->getShopifyApi()->call([
+            'URL' => API::PREFIX . $parent->getSpecificPath() . '/' . static::getResourcePluralName() . '/' . $id . '.json',
+            'METHOD' => 'GET',
+        ]);
+    }
+
+    /**
+     * Retrieve a single shopify resource object of this particular type belonging to $parent
+     *
+     * @param ShopifyApiUser $parent
+     * @param string $id
+     * @return ShopifyResource
+     */
+    public static function pullShopifyResourceById(ShopifyApiUser $parent, $id)
+    {
+        return new static($parent, static::pullShopifyResourceDataById($parent, $id));
     }
 }
