@@ -224,13 +224,6 @@ class API
 
     public function call($userData = array(), $verifyData = true)
     {
-        
-//        $this->resetData(array($this->shopifyData['SINGULAR_NAME'],'URL','METHOD'));
-//        $userData = $this->shopifyData;
-//        print_r($userData); exit;
-        
-        //$userData = $userData[$this->shopifyData['SINGULAR_NAME']];
-        
         if ($verifyData) {
             foreach (self::$_KEYS as $k) {
                 if ((!array_key_exists($k, $this->_API)) || (empty($this->_API[$k]))) {
