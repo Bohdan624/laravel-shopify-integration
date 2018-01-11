@@ -179,6 +179,142 @@ The parameters listed below allow you to set required values for an API call as 
 * `FAILONERROR`: The value passed to cURL's [CURLOPT_FAILONERROR](http://php.net/manual/en/function.curl-setopt.php) setting. `TRUE` will cause the API Wrapper to throw an Exception if the HTTP code is >= `400`. `FALSE` in combination with `ALLDATA` set to `TRUE` will give you more debug information.
   * Default: `TRUE`
 
+## Adding properties to the call data
+### $sh->addCallData($key, $value);
+  Adds properties to the call data.
+
+  Example:
+
+  ``` 
+  $sh->addCallData('METHOD', 'GET'); 
+  ``` 
+  The results would look like
+
+  ``` 
+	[
+		METHOD: "GET"
+	]
+ ```
+### $sh->addData($key, $value);
+  Adds properties to the call data's "DATA" array.
+  Example:
+
+  ``` 
+  $sh->addData('limit', 10); 
+  ``` 
+
+  The results would look like:
+
+  ``` 
+	[
+		DATA: {
+			limit: "10"
+		}
+	]
+ ```
+### $sh->buildChildData($key, $value, $child_resource = null);
+  Adds properties inside the DATA array's $resource property.
+  if $child\_resource variable is passed, it will add it inside the $resource array's $child\_resource property.
+### $sh->commitChildData($child_resource);
+  Commits the properties of the DATA array's $resource property.
+
+  Example:
+
+  ``` 
+   $this->sh->addCallData('resource', "products");
+
+   $this->sh->buildChildData("title", "Test Title");
+   $this->sh->commitChildData("title");
+
+   $this->sh->buildChildData("url", "https://image", "images"); 
+   $this->sh->commitChildData("images");
+  
+  ```
+
+  The results would look like:
+
+  ``` 
+	PLURAL_NAME: "products",  /* PLURAL_NAME and SINGULAR_NAME will be added automatically when resource property is added */
+	SINGULAR_NAME: "product",
+	resource: "products",
+	DATA: [ 
+		product: {
+			title: "Test Title",
+			images: {
+				0: {
+						url: "https://image",
+					}
+				}
+			}
+	 ]
+ ```
+
+### Some more examples:
+Example1: 
+
+
+```
+	$this->sh->addCallData('resource', "products");
+	$this->sh->addCallData('URL', 'admin/' . "products" . '.json');
+	$this->sh->addCallData('METHOD', 'GET');
+
+	$this->sh->addData('limit', 10);
+```
+
+Results: 
+
+```
+{
+	PLURAL_NAME: "products",
+	SINGULAR_NAME: "product",
+	resource: "custom_collections",
+	URL: "admin/custom_collections.json",
+	METHOD: "GET",
+	DATA: {
+		limit: "10",
+	}
+}
+```
+
+Example 2:
+
+
+```
+	$this->sh->addCallData('resource', "products");
+	$this->sh->addCallData('URL', 'admin/' . "products" . '.json');
+	$this->sh->addCallData('METHOD', 'GET');
+
+	$this->sh->buildChildData("title", "Test Title");
+	$this->sh->commitChildData("title");
+
+	$this->sh->buildChildData("url", "http://image-link/", "images");
+	$this->sh->buildChildData("title", "Image Title!", "images");
+	$this->sh->commitChildData("images");
+```
+
+Results: 
+
+```
+{
+	PLURAL_NAME: "products",
+	SINGULAR_NAME: "product",
+	resource: "custom_collections",
+	URL: "admin/custom_collections.json",
+	METHOD: "GET",
+	DATA: {
+		product: {
+			title: "Test Title",
+			images: {
+				0: {
+						url: "http://image-link/",
+						title: "Image Title!"
+				}
+			}
+		}
+	}
+}
+```
+
 
 ## Some Examples
 Assume that `$sh` has already been set up as documented above.
