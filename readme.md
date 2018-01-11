@@ -180,21 +180,31 @@ The parameters listed below allow you to set required values for an API call as 
   * Default: `TRUE`
 
 ## Adding properties to the call data
-* $sh->addCallData($key, $value);
-  * Adds properties to the call data
+### $sh->addCallData($key, $value);
+  Adds properties to the call data.
+
   Example:
-  ``` $sh->addCallData('METHOD', 'GET'); ``` 
+
+  ``` 
+  $sh->addCallData('METHOD', 'GET'); 
+  ``` 
   The results would look like
+
   ``` 
 	[
 		METHOD: "GET"
 	]
  ```
-* $sh->addData($key, $value);
-  * Adds properties to the call data's "DATA" array
+### $sh->addData($key, $value);
+  Adds properties to the call data's "DATA" array.
   Example:
-  ``` $sh->addData('limit', 10); ``` 
-  The results would look like
+
+  ``` 
+  $sh->addData('limit', 10); 
+  ``` 
+
+  The results would look like:
+
   ``` 
 	[
 		DATA: {
@@ -202,15 +212,16 @@ The parameters listed below allow you to set required values for an API call as 
 		}
 	]
  ```
-* $sh->buildChildData($key, $value, $child_resource = null);
-  * Adds properties inside the DATA array's $resource property
-  * if $child\_resource variable is passed, it will add it inside the $resource array's $child\_resource property
-* $sh->commitChildData($child_resource);
-  * Commits the properties of the DATA array's $resource property
+### $sh->buildChildData($key, $value, $child_resource = null);
+  Adds properties inside the DATA array's $resource property.
+  if $child\_resource variable is passed, it will add it inside the $resource array's $child\_resource property.
+### $sh->commitChildData($child_resource);
+  Commits the properties of the DATA array's $resource property.
+
   Example:
+
   ``` 
-   $resource = 'custom_collections';
-   $this->sh->addCallData('resource', $resource);
+   $this->sh->addCallData('resource', "products");
 
    $this->sh->buildChildData("title", "Test Title");
    $this->sh->commitChildData("title");
@@ -219,13 +230,15 @@ The parameters listed below allow you to set required values for an API call as 
    $this->sh->commitChildData("images");
   
   ```
-  The results would look like
+
+  The results would look like:
+
   ``` 
-	PLURAL_NAME: "custom_collections",  /* PLURAL_NAME and SINGULAR_NAME will be added automatically when resource property is added */
-	SINGULAR_NAME: "custom_collection",
-	resource: "custom_collections",
+	PLURAL_NAME: "products",  /* PLURAL_NAME and SINGULAR_NAME will be added automatically when resource property is added */
+	SINGULAR_NAME: "product",
+	resource: "products",
 	DATA: [ 
-		custom_collection: {
+		product: {
 			title: "Test Title",
 			images: {
 				0: {
@@ -235,14 +248,41 @@ The parameters listed below allow you to set required values for an API call as 
 			}
 	 ]
  ```
-* Some more examples:
+
+### Some more examples:
+Example1: 
+
+
 ```
-	$resource = 'custom_collections';
-	$this->sh->addCallData('resource', $resource);
-	$this->sh->addCallData('URL', 'admin/' . $resource . '.json');
+	$this->sh->addCallData('resource', "products");
+	$this->sh->addCallData('URL', 'admin/' . "products" . '.json');
 	$this->sh->addCallData('METHOD', 'GET');
 
 	$this->sh->addData('limit', 10);
+```
+
+Results: 
+
+```
+{
+	PLURAL_NAME: "products",
+	SINGULAR_NAME: "product",
+	resource: "custom_collections",
+	URL: "admin/custom_collections.json",
+	METHOD: "GET",
+	DATA: {
+		limit: "10",
+	}
+}
+```
+
+Example 2:
+
+
+```
+	$this->sh->addCallData('resource', "products");
+	$this->sh->addCallData('URL', 'admin/' . "products" . '.json');
+	$this->sh->addCallData('METHOD', 'GET');
 
 	$this->sh->buildChildData("title", "Test Title");
 	$this->sh->commitChildData("title");
@@ -253,27 +293,28 @@ The parameters listed below allow you to set required values for an API call as 
 ```
 
 Results: 
+
 ```
 {
-	PLURAL_NAME: "custom_collections",
-	SINGULAR_NAME: "custom_collection",
+	PLURAL_NAME: "products",
+	SINGULAR_NAME: "product",
 	resource: "custom_collections",
 	URL: "admin/custom_collections.json",
 	METHOD: "GET",
 	DATA: {
-	limit: "10",
-	custom_collection: {
-		title: "Test Title",
-		images: {
-			0: {
-					url: "http://image-link/",
-					title: "Image Title!"
+		product: {
+			title: "Test Title",
+			images: {
+				0: {
+						url: "http://image-link/",
+						title: "Image Title!"
 				}
 			}
 		}
 	}
 }
 ```
+
 
 ## Some Examples
 Assume that `$sh` has already been set up as documented above.

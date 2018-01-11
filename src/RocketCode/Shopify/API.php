@@ -463,11 +463,11 @@ class API
     public function listShopifyResources()
     {
         try {
-            $call = $this->call($this->shopifyData, $this->shopifyData['DATA']);
+            $result = $this->call($this->shopifyData, $this->shopifyData['DATA']);
             
             $this->resetData();
             
-            return $call;
+            return $result;
         } catch (Exception $e) {
         }
     }
@@ -494,8 +494,8 @@ class API
         $currentShopifyData = $this->shopifyData;
         $currentShopifyData['URL'] = $this->shopifyData['PLURAL_NAME'] . '/count.json';
         
-        $call = $this->call($currentShopifyData);
-        return $call->count;
+        $result = $this->call($currentShopifyData);
+        return $result->count;
     }
     
     /**
@@ -596,16 +596,16 @@ class API
         $currentShopifyData['METHOD'] = 'GET';
         $currentShopifyData['URL'] .= '?' . $compare_property . '=' . urlencode($compare_property_value);
 
-        $call = $this->call($currentShopifyData, $currentShopifyData['DATA']);
+        $result = $this->call($currentShopifyData, $currentShopifyData['DATA']);
 
-        // If one record was returned maybe updatE?
-        if (count($call->$resource) == 1 && $update == true) {
+        // If one record is returned optionally update, otherwise create. If more than one record is returned throw an error
+        if (count($result->$resource) == 1 && $update == true) {
             // Update the record
-            $this->updateRecord($call->$resource[0]->id, $compare_property);
-        } elseif (count($call->$resource) == 0) {
+            $this->updateRecord($result->$resource[0]->id, $compare_property);
+        } elseif (count($result->$resource) == 0) {
             // Create
             $this->createRecord();
-        } elseif (count($call->$resource) > 1) {
+        } elseif (count($result->$resource) > 1) {
             // more than one record exists.
             echo 'error?';
         }
@@ -627,7 +627,8 @@ class API
         $currentShopifyData['METHOD'] = 'PUT';
         $currentShopifyData['URL'] = 'admin/' . $resource . '/' . $id . '.json';
 
-        $call = $this->call($currentShopifyData, $currentShopifyData['DATA']);
+        $result = $this->call($currentShopifyData, $currentShopifyData['DATA']);
+        return $result;
     }
 
     /**
@@ -635,19 +636,19 @@ class API
      */
     public function createRecord()
     {
-        $call = $this->call($this->shopifyData, $this->shopifyData['DATA']);
+        $result = $this->call($this->shopifyData, $this->shopifyData['DATA']);
+        return $result;
     }
 
     public function deleteRecord($id)
     {
         $resource = $this->shopifyData['resource'];
 
-        $currentShopifyData = $this->shopifyData;
-        $currentShopifyData['METHOD'] = 'DELETE';
-        $currentShopifyData['URL'] = 'admin/' . $resource . '/' . $id . '.json';
+        $this->shopifyData['METHOD'] = 'DELETE';
+        $this->shopifyData['URL'] = 'admin/' . $resource . '/' . $id . '.json';
 
-        $call = $this->call($currentShopifyData);
+        $result = $this->call($this->shopifyData);
 
-        print_r($call);
+        return $result;
     }
 } // End of API class
