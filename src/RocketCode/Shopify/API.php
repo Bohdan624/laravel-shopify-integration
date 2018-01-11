@@ -436,7 +436,7 @@ class API
     public function throttleCalls($time)
     {
         if ($this->callsLeft() <= 10) {
-//            echo 'Sleep!' . '<br>';
+            // echo 'Sleep!' . $this->callsLeft() . '<br>';
             sleep($time);
         }
     }
@@ -451,6 +451,10 @@ class API
     {
         if (array_key_exists('HTTP_X_SHOPIFY_SHOP_API_CALL_LIMIT', $this->last_response_headers)) {
             $params = explode('/', $this->last_response_headers['HTTP_X_SHOPIFY_SHOP_API_CALL_LIMIT']);
+        }
+
+        if (!isset($params)) {
+            return 12;
         }
 
         return (int) $params[$index];
@@ -632,5 +636,18 @@ class API
     public function createRecord()
     {
         $call = $this->call($this->shopifyData, $this->shopifyData['DATA']);
+    }
+
+    public function deleteRecord($id)
+    {
+        $resource = $this->shopifyData['resource'];
+
+        $currentShopifyData = $this->shopifyData;
+        $currentShopifyData['METHOD'] = 'DELETE';
+        $currentShopifyData['URL'] = 'admin/' . $resource . '/' . $id . '.json';
+
+        $call = $this->call($currentShopifyData);
+
+        print_r($call);
     }
 } // End of API class
