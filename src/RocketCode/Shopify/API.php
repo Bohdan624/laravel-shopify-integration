@@ -537,6 +537,7 @@ class API
     public function listShopifyResources()
     {
         try {
+            // Checks if the DATA array is set, if it isn't, do not pass it when calling
             if (isset($this->shopifyData['DATA'])) {
                 $result = $this->call($this->shopifyData, $this->shopifyData['DATA']);
             } else {
@@ -578,6 +579,7 @@ class API
     
     /**
      * Adds properties to the DATA array
+     * e.g. addData('title', 'Title') would result [ DATA: [ title: 'Title' ] ]
      */
     public function addData($key, $value)
     {
@@ -585,12 +587,15 @@ class API
     }
     
     /**
-     * Adds a call property
-     * @param string $key
-     * @param string $value
+     * Adds a property to the call
+     * e.g. addCallData('METHOD', 'GET') would result [ METHOD: 'GET' ]
+     * CallData is the immediate property of the call array e.g. METHOD or URL
+     * @param string $key - the property's name
+     * @param string $value - the property's value
      */
     public function addCallData($key, $value)
     {
+        // $key is the property's name
         if ($key == 'resource') {
             $this->setSingularAndPluralName($value);
         }
@@ -602,6 +607,10 @@ class API
 
     /**
      * Builds a property or child_resource to be committed to a parent_resource
+     * e.g.
+     * addCallData('resource', "products")
+     * buildChildData("url", "https://image", "images") would result
+     * [ DATA: [ product: { images:{ 0:{ url: "https://image" } } } ] ]
      * @param string $key The key value of the property to be added
      * @param string $value The value of the property to be added
      * @param string $child_resource the resource name to nest the key value pair into
@@ -799,6 +808,10 @@ class API
         Storage::put($this->error_log_dir . '/' . $error_log_name, $data);
     }
 
+    /**
+     * Moves the error log file to the archive directory,
+     * then sends an email of the error log
+     */
     public function emailAndProcess()
     {
         // Archive the error log file
@@ -853,11 +866,16 @@ class API
         if (empty($processed_dirs)) {
             Storage::makeDirectory($processed_dir);
         }
-        // updating the filename to use now() again for more updated date
-        $updated_name = $this->unique_name . '_' . 'webhooks.json';
+        // updating the modified date
+        touch($webhooks_dir . '/' . $file);
+        // get the file name from the path
+        $file_name = explode('/', $file);
+        // get the last element which is the file name
+        $file_name = end($file_name);
+
         // move the log file to processed directory
         $src_file = $webhooks_dir . '/' . $file;
-        $dest_file = $processed_dir . '/' . $updated_name;
+        $dest_file = $processed_dir . '/' . $file_name;
         Storage::move($src_file, $dest_file);
     }
 

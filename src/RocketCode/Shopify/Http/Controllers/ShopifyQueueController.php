@@ -11,6 +11,12 @@ use App\ShopQueueLog;
 use Mail;
 use RocketCode\Shopify\SystemNotice;
 
+/**
+ * The class iterates through all the shops
+ * and runs the specified function from the specified controller for each of the resource items
+ * unless it reached $max_records (which is also specified)
+ */
+
 class ShopifyQueueController extends ShopifyController
 {
     private $controller = null;
@@ -141,7 +147,7 @@ class ShopifyQueueController extends ShopifyController
             $message->shop = $shop;
 
             if ($shopQueueLog->wasRecentlyCreated) {
-                Mail::to($mailto)->send(new Mail\SystemNotice($message));
+                Mail::to($mailto)->send(new SystemNotice($message));
             }
 
             return $shopQueueLog;

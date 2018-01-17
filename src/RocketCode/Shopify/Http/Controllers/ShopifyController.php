@@ -73,7 +73,7 @@ class ShopifyController extends Controller
     
     /**
      * Switches to the given shop domain.
-     * Creates the domain if it doesn't exist
+     * Creates the shop entry in the shopify_shops table if it doesn't exist
      * @param String $shop
      * @param bool $install
      */
