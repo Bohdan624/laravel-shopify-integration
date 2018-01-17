@@ -4,6 +4,16 @@
  * Class API
  * @package RocketCode\Shopify
  */
+
+use Illuminate\Http\File;
+use Storage;
+use Carbon\Carbon;
+use Log;
+use Illuminate\Http\Request;
+use Mail;
+use RocketCode\Shopify\ShopifyWebhookNotice;
+use RocketCode\Shopify\SystemNotice;
+
 class API
 {
     private $_API = array();
@@ -13,6 +23,18 @@ class API
     private $childData = array();
     
     private $last_response_headers = array();
+
+    // setting default directories
+    private $webhooks_dir = 'shopify_webhooks/';
+    private $error_log_dir = 'shopify_webhooks/logs';
+    private $archive_dir = 'shopify_webhooks/logs/archives';
+
+    // amount of days for the archive files to expire
+    private $expired_days = 30;
+    // Carbon class object
+    private $carbon;
+    // unique name for the webhook/log files
+    private $unique_name = '';
 
     const PREFIX = '/admin';
 
@@ -25,6 +47,9 @@ class API
         if (is_array($data)) {
             $this->setup($data);
         }
+        $this->carbon = new Carbon;
+        // e.g. 2018_01_15_12_32_58_12345678
+        $this->unique_name = date('Y_m_d_h_i_s', time()) . '_' . rand(0, 100000000);
     }
 
     /**
@@ -349,41 +374,97 @@ class API
         }
     }
 
+    /**
+     * Creates a webhook with the given topic and address
+     * @param String $topic - the topic that is passed e.g. products/create
+     * @param String $address - a url to be called when the webhook triggers
+     */
     public function createWebhook($topic, $address)
     {
-        $this->call([
+        $address = secure_url($address);
+        // check if the webhook exists
+        $result = $this->call([
             'URL' => self::PREFIX . '/webhooks.json',
-            'METHOD' => 'POST',
+            'METHOD' => 'GET',
             'DATA' => [
-                'webhook' => [
-                    'topic' => $topic,
-                    'address' => $address,
-                    'format' => 'json',
-                ]
+                'topic' => $topic,
+                'address' => $address,
+                'format' => 'json',
             ]
         ]);
+
+        // create if it doesn't exist
+        if (empty($result->webhooks) && isset($result->webhooks)) {
+            $this->call([
+                'URL' => self::PREFIX . '/webhooks.json',
+                'METHOD' => 'POST',
+                'DATA' => [
+                    'webhook' => [
+                        'topic' => $topic,
+                        'address' => $address,
+                        'format' => 'json',
+                    ]
+                ]
+            ]);
+        }
     }
 
+    /**
+     * Checks and updates an existing webhook
+     * @param int $id - id of the webhook
+     * @param string $address - url to update to
+     */
     public function updateWebhook($id, $address)
     {
-        $this->call([
-            'URL' => self::PREFIX . '/webhooks/' . intval($id) . '.json',
-            'METHOD' => 'PUT',
+        $address = secure_url($address);
+        // get all the webhooks
+        $result = $this->call([
+            'URL' => self::PREFIX . '/webhooks.json',
+            'METHOD' => 'GET',
             'DATA' => [
-                'webhook' => [
-                    'id' => intval($id),
-                    'address' => $address,
-                ]
+                'format' => 'json',
             ]
         ]);
+        
+        // check if the webhooks array has an item with the same id.
+        if (in_array(intval($id), array_column($result->webhooks, 'id'))) {
+            // update the webhook
+            $this->call([
+                'URL' => self::PREFIX . '/webhooks/' . intval($id) . '.json',
+                'METHOD' => 'PUT',
+                'DATA' => [
+                    'webhook' => [
+                        'id' => intval($id),
+                        'address' => $address,
+                    ]
+                ]
+            ]);
+        }
     }
 
+    /**
+     * Checks and deletes an existing webhook
+     * @param int $id - the id of a webhook
+     */
     public function deleteWebhook($id)
     {
-        $this->call([
-            'URL' => self::PREFIX . '/webhooks/' . intval($id) . '.json',
-            'METHOD' => 'DELETE',
+        // get all the webhooks
+        $result = $this->call([
+            'URL' => self::PREFIX . '/webhooks.json',
+            'METHOD' => 'GET',
+            'DATA' => [
+                'format' => 'json',
+            ]
         ]);
+        
+        // check if the webhooks array has an item with the same id.
+        if (in_array(intval($id), array_column($result->webhooks, 'id'))) {
+            // delete if webhook exists
+            $this->call([
+                'URL' => self::PREFIX . '/webhooks/' . intval($id) . '.json',
+                'METHOD' => 'DELETE',
+            ]);
+        }
     }
 
     /**
@@ -456,7 +537,12 @@ class API
     public function listShopifyResources()
     {
         try {
-            $result = $this->call($this->shopifyData, $this->shopifyData['DATA']);
+            // Checks if the DATA array is set, if it isn't, do not pass it when calling
+            if (isset($this->shopifyData['DATA'])) {
+                $result = $this->call($this->shopifyData, $this->shopifyData['DATA']);
+            } else {
+                $result = $this->call($this->shopifyData);
+            }
             
             $this->resetData();
             
@@ -480,7 +566,7 @@ class API
     
     /**
      * Gets the total count of the resource
-     * @resource string
+     * @param string $resource
      */
     public function getTotalCount($resource)
     {
@@ -493,6 +579,7 @@ class API
     
     /**
      * Adds properties to the DATA array
+     * e.g. addData('title', 'Title') would result [ DATA: [ title: 'Title' ] ]
      */
     public function addData($key, $value)
     {
@@ -500,28 +587,38 @@ class API
     }
     
     /**
-     * Adds a call property
-     * @key string
-     * @value string
+     * Adds a property to the call
+     * e.g. addCallData('METHOD', 'GET') would result [ METHOD: 'GET' ]
+     * CallData is the immediate property of the call array e.g. METHOD or URL
+     * @param string $key - the property's name
+     * @param string $value - the property's value
      */
     public function addCallData($key, $value)
     {
+        // $key is the property's name
         if ($key == 'resource') {
             $this->setSingularAndPluralName($value);
+        }
+        if ($key == 'URL') {
+            $value .= '.json';
         }
         $this->shopifyData[$key] = $value;
     }
 
     /**
      * Builds a property or child_resource to be committed to a parent_resource
-     * @key string The key value of the property to be added
-     * @value string The value of the property to be added
-     * @child_resource the resource name to nest the key value pair into
+     * e.g.
+     * addCallData('resource', "products")
+     * buildChildData("url", "https://image", "images") would result
+     * [ DATA: [ product: { images:{ 0:{ url: "https://image" } } } ] ]
+     * @param string $key The key value of the property to be added
+     * @param string $value The value of the property to be added
+     * @param string $child_resource the resource name to nest the key value pair into
      */
     public function buildChildData($key, $value, $child_resource = null)
     {
         if ($child_resource == null) {
-            $this->childData[$key] = $value;
+            $this->childData[$this->shopifyData['SINGULAR_NAME']][$key] = $value;
         } else {
             $this->childData[$child_resource][$key] = $value;
         }
@@ -529,15 +626,17 @@ class API
 
     /**
      * Commits the childData to the shopifyData
-     * @child_resource string The resource name to nest the array into
+     * @param string $child_resource The resource name to nest the array into
      */
-    public function commitChildData($child_resource)
+    public function commitChildData($child_resource = null)
     {
         $resource = $this->shopifyData['SINGULAR_NAME'];
-        if (!is_array($this->childData[$child_resource])) {
-            $this->shopifyData['DATA'][$resource][$child_resource] = $this->childData[$child_resource];
-        } else {
+        if ($child_resource == null) {
+            $this->shopifyData['DATA'] = $this->childData;
+        } elseif (is_array($this->childData[$child_resource])) {
             $this->shopifyData['DATA'][$resource][$child_resource][] = $this->childData[$child_resource];
+        } else {
+            $this->shopifyData['DATA'][$resource][$child_resource] = $this->childData[$child_resource];
         }
         unset($this->childData);
     }
@@ -552,7 +651,7 @@ class API
 
     /**
      * Sets the singular and plural names for the resource
-     * @resource string The resource name
+     * @param string $resource The resource name
      */
     public function setSingularAndPluralName($resource)
     {
@@ -560,11 +659,11 @@ class API
                 case 'products':
                     $this->shopifyData['PLURAL_NAME'] = $resource;
                     $this->shopifyData['SINGULAR_NAME'] = 'product';
-
-                    // no break
+                    break;
                 case 'custom_collections':
                     $this->shopifyData['PLURAL_NAME'] = 'custom_collections';
                     $this->shopifyData['SINGULAR_NAME'] = 'custom_collection';
+                    break;
             }
     }
     
@@ -575,8 +674,8 @@ class API
 
     /**
      *  Checks if a record with the property value exists and creates or updates a record depending.
-     *  @compare_property string property to compare
-     *  @update bool whether to update a record if it exists
+     *  @param string $compare_property property to compare
+     *  @param bool $update whether to update a record if it exists
     */
     public function createOrUpdate($compare_property, $update = false)
     {
@@ -587,27 +686,35 @@ class API
         $currentShopifyData = $this->shopifyData;
         $currentShopifyData = array_merge($currentShopifyData, $this->shopifyData);
         $currentShopifyData['METHOD'] = 'GET';
-        $currentShopifyData['URL'] .= '?' . $compare_property . '=' . urlencode($compare_property_value);
+
+        if ($compare_property == 'id') {
+            $compare_property_valid_name = 'ids';
+        } else {
+            $compare_property_valid_name = $compare_property;
+        }
+
+        $currentShopifyData['URL'] .= '?' . $compare_property_valid_name . '=' . urlencode($compare_property_value);
 
         $result = $this->call($currentShopifyData, $currentShopifyData['DATA']);
 
         // If one record is returned optionally update, otherwise create. If more than one record is returned throw an error
         if (count($result->$resource) == 1 && $update == true) {
             // Update the record
-            $this->updateRecord($result->$resource[0]->id, $compare_property);
+            $result = $this->updateRecord($result->$resource[0]->id, $compare_property);
         } elseif (count($result->$resource) == 0) {
             // Create
-            $this->createRecord();
+            $result = $this->createRecord();
         } elseif (count($result->$resource) > 1) {
             // more than one record exists.
-            echo 'error?';
+            die('Error');
         }
+        return $result;
     }
 
     /**
      * Updates a record's $property with $proprety_value with the given $id
-     * @id int The id of the record
-     * @property string the property name
+     * @param int $id The id of the record
+     * @param string $property the property name
     **/
     public function updateRecord($id, $property)
     {
@@ -618,7 +725,7 @@ class API
         $currentShopifyData = $this->shopifyData;
         $currentShopifyData = array_merge($currentShopifyData, $this->shopifyData);
         $currentShopifyData['METHOD'] = 'PUT';
-        $currentShopifyData['URL'] = 'admin/' . $resource . '/' . $id . '.json';
+        $currentShopifyData['URL'] = self::PREFIX . '/' . $resource . '/' . $id . '.json';
 
         $result = $this->call($currentShopifyData, $currentShopifyData['DATA']);
         return $result;
@@ -635,13 +742,179 @@ class API
 
     public function deleteRecord($id)
     {
+        // Check if the record exists
         $resource = $this->shopifyData['resource'];
+        $resource_singular = $this->shopifyData['SINGULAR_NAME'];
+        $compare_property_value = $id;
 
-        $this->shopifyData['METHOD'] = 'DELETE';
-        $this->shopifyData['URL'] = 'admin/' . $resource . '/' . $id . '.json';
+        $currentShopifyData = $this->shopifyData;
+        $currentShopifyData = array_merge($currentShopifyData, $this->shopifyData);
+        $currentShopifyData['METHOD'] = 'GET';
+        $compare_property_name = 'ids';
+        $currentShopifyData['URL'] .= '?' . $compare_property_name . '=' . urlencode($compare_property_value);
 
-        $result = $this->call($this->shopifyData);
+        $result = $this->call($currentShopifyData);
 
-        return $result;
+        // delete the record if it exists
+        if (count($result->$resource) == 1) {
+            $this->shopifyData['METHOD'] = 'DELETE';
+            $this->shopifyData['URL'] = 'admin/' . $resource . '/' . $id . '.json';
+
+            $result = $this->call($this->shopifyData);
+
+            return $result;
+        } elseif (count($result->$resource) < 1) {
+            echo "Error: record doesn't exist";
+            $mailto = 'it@cottonbabies.com';
+            $message = new \stdClass();
+            $message->error = "Error: record doesn't exist. Result: " . $result;
+            
+            Mail::to($mailto)->send(new SystemNotice($message));
+        }
+    }
+
+    /**
+     * Verifies request and Saves the webhooks in designated directory e.g. shopify_webhooks/domain/topic
+     * @param object $request - the Request object
+     */
+    public function saveWebhooks(Request $request)
+    {
+        if ($request->header('x-shopify-hmac-sha256')) {
+            $hmac = $request->header('x-shopify-hmac-sha256');
+        }
+        $data = file_get_contents("php://input");
+        $verify = $this->verify_webhook($data, $hmac);
+        // if verification passed
+        if ($verify) {
+            // replaces "/" with "_" to create valid topic directories
+            $topic_dir = str_replace('/', '_', $request->header('x-shopify-topic'));
+            $storage_dir = $this->webhooks_dir . $request->header('x-shopify-shop-domain') . '/' . $topic_dir;
+            $dir = Storage::directories($storage_dir);
+            if (empty($dir)) {
+                Storage::makeDirectory($storage_dir);
+            }
+            $file_name = $this->unique_name . '.json';
+
+            return Storage::put($storage_dir . '/' . $file_name, $data);
+        }
+        // if verification failed
+        $error_log_name = $this->unique_name . '_' . 'webhooks.log';
+        // check if logs directory exists under shopify_webhooks directory
+        $error_log_dirs = Storage::directories($this->error_log_dir);
+        if (empty($error_log_dirs)) {
+            Storage::makeDirectory($this->error_log_dir);
+        }
+        // Create the error log file
+        Storage::put($this->error_log_dir . '/' . $error_log_name, $data);
+    }
+
+    /**
+     * Moves the error log file to the archive directory,
+     * then sends an email of the error log
+     */
+    public function emailAndProcess()
+    {
+        // Archive the error log file
+        // check if archives directory exists
+        $archive_dirs = Storage::directories($this->archive_dir);
+        if (empty($archive_dirs)) {
+            Storage::makeDirectory($this->archive_dir);
+        }
+        // updating the filename to use now() again for more updated date
+        $updated_name = $this->unique_name . '_' . 'webhooks.log';
+        // get all the error logs in the logs directory
+        $error_logs =  Storage::files($this->error_log_dir);
+        foreach ($error_logs as $error_log) {
+            // get the log content
+            $data = Storage::get($error_log);
+            // move the log file to archives directory
+            $src_file = $error_log;
+            $dest_file = $this->archive_dir . '/' . $updated_name;
+            Storage::move($src_file, $dest_file);
+            // send an email of the error log
+            $mailto = 'it@cottonbabies.com';
+            $message = new \stdClass;
+            $message->error = $data;
+            Mail::to($mailto)->send(new ShopifyWebhookNotice($message));
+        }
+    }
+
+    /**
+     * Returns a list of all the files in the webhooks directory
+     * @param String $topic - the topic e.g products/create
+     * @return Array
+     * use with the logs.default view e.g.
+     *  $data = $this->sh->readWebhooks('products/create');
+     *  return view('logs.default', compact('data'));
+     */
+    public function readWebhooks($topic)
+    {
+        return Storage::allFiles($this->webhooks_dir . $this->_API['SHOP_DOMAIN'] . '/' . $topic);
+    }
+
+    /**
+     * Moves the existing webhook file to a sub-directory under the topic directory called "processed"
+     * @param String $topic - the topic e.g. products/create
+     * @param String $file - the file name e.g. shopify_webhooks/domain/topic/file_name
+     */
+    public function processWebhooks($topic, $file)
+    {
+        $webhooks_dir = $this->webhooks_dir . $this->_API['SHOP_DOMAIN'] . '/' . $topic;
+        $processed_dir = $this->webhooks_dir . $this->_API['SHOP_DOMAIN'] . '/' . $topic . '/processed';
+        // check if processed directory exists
+        $processed_dirs = Storage::directories($processed_dir);
+        if (empty($processed_dirs)) {
+            Storage::makeDirectory($processed_dir);
+        }
+        // updating the modified date
+        touch($webhooks_dir . '/' . $file);
+        // get the file name from the path
+        $file_name = explode('/', $file);
+        // get the last element which is the file name
+        $file_name = end($file_name);
+
+        // move the log file to processed directory
+        $src_file = $webhooks_dir . '/' . $file;
+        $dest_file = $processed_dir . '/' . $file_name;
+        Storage::move($src_file, $dest_file);
+    }
+
+    /**
+     * Checks if the files in the processed and archived folders are older than 30 days and delete them if they are
+     * @param bool $logs - determines whether to clean the error logs or the webhook files
+     */
+    public function cleanWebhooks($logs = false)
+    {
+        if ($logs) {
+            $archived_files = Storage::allFiles($this->archive_dir);
+            foreach ($archived_files as $file) {
+                // Setting the file's last modified timestamp to the class' carbon object
+                $this->carbon->timestamp = Storage::lastModified($file);
+                // Get the difference between file modification date and now. Then compare it to the expired days variable
+                if ($this->carbon->diffInDays($this->carbon->now()) >= $this->expired_days) {
+                    Storage::delete($file);
+                }
+            }
+        } elseif ($logs == false) {
+            $shop_domain_dir = $this->webhooks_dir . $this->_API['SHOP_DOMAIN'];
+            $topic_directories = Storage::directories($shop_domain_dir);
+            foreach ($topic_directories as $topic_dir) {
+                $processed_files = Storage::allFiles($topic_dir);
+                foreach ($processed_files as $file) {
+                    // Setting the file's last modified timestamp to the class' carbon object
+                    $this->carbon->timestamp = Storage::lastModified($file);
+                    // Get the difference between file modification date and now. Then compare it to the expired days variable
+                    if ($this->carbon->diffInDays($this->carbon->now()) >= $this->expired_days) {
+                        Storage::delete($file);
+                    }
+                }
+            }
+        }
+    }
+
+    public function verify_webhook($data, $hmac_header)
+    {
+        $calculated_hmac = base64_encode(hash_hmac('sha256', $data, env('SHOPIFY_APP_SECRET'), true));
+        return ($hmac_header == $calculated_hmac);
     }
 } // End of API class

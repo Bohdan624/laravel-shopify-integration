@@ -3,29 +3,29 @@
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Foundation\AliasLoader;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Console\Scheduling\Schedule;
 
 class ShopifyServiceProvider extends ServiceProvider
 {
 
-	/**
-	 * Indicates if loading of the provider is deferred.
-	 *
-	 * @var bool
-	 */
-	protected $defer = false;
+    /**
+     * Indicates if loading of the provider is deferred.
+     *
+     * @var bool
+     */
+    protected $defer = false;
 
-	/**
-	 * Register the service provider.
-	 *
-	 * @return void
-	 */
-	public function register()
-	{
-		$this->app->bind('ShopifyAPI', function($app, $config = FALSE)
-		{
-			return new API($config);
-		});
-	}
+    /**
+     * Register the service provider.
+     *
+     * @return void
+     */
+    public function register()
+    {
+        $this->app->bind('ShopifyAPI', function ($app, $config = false) {
+            return new API($config);
+        });
+    }
 
     public function boot()
     {
@@ -36,16 +36,27 @@ class ShopifyServiceProvider extends ServiceProvider
                 && preg_match("/^.{1,253}$/", $value) //overall length check
                 && preg_match("/^[^\.]{1,63}(\.[^\.]{1,63})*$/", $value)); //length of each label
         });
+        // incorporating the Routes, Views, Migrations to the package
+        $this->loadMigrationsFrom(__DIR__.'/migrations');
+        $this->loadRoutesFrom(__DIR__.'/routes/web.php');
+        $this->loadViewsFrom(__DIR__.'/views', 'shopify_api_wrapper');
+
+        $this->app->booted(function () {
+            $schedule = app(Schedule::class);
+            $schedule->call(function () {
+                $api = new API;
+                $api->emailAndProcess();
+            })->everyMinute();
+        });
     }
 
-	/**
-	 * Get the services provided by the provider.
-	 *
-	 * @return array
-	 */
-	public function provides()
-	{
-		return ['ShopifyAPI', 'RocketCode\Shopify\API'];
-	}
-
+    /**
+     * Get the services provided by the provider.
+     *
+     * @return array
+     */
+    public function provides()
+    {
+        return ['ShopifyAPI', 'RocketCode\Shopify\API'];
+    }
 }

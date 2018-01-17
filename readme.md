@@ -188,6 +188,8 @@ The parameters listed below allow you to set required values for an API call as 
   ``` 
   $sh->addCallData('METHOD', 'GET'); 
   ``` 
+
+
   The results would look like
 
   ``` 
@@ -250,12 +252,12 @@ The parameters listed below allow you to set required values for an API call as 
  ```
 
 ### Some more examples:
-Example1: 
+Example 1: 
 
 
 ```
 	$this->sh->addCallData('resource', "products");
-	$this->sh->addCallData('URL', 'admin/' . "products" . '.json');
+	$this->sh->addCallData('URL', 'admin/' . "products");
 	$this->sh->addCallData('METHOD', 'GET');
 
 	$this->sh->addData('limit', 10);
@@ -281,7 +283,7 @@ Example 2:
 
 ```
 	$this->sh->addCallData('resource', "products");
-	$this->sh->addCallData('URL', 'admin/' . "products" . '.json');
+	$this->sh->addCallData('URL', 'admin/' . "products");
 	$this->sh->addCallData('METHOD', 'GET');
 
 	$this->sh->buildChildData("title", "Test Title");
@@ -386,3 +388,28 @@ foreach($shops as $domain => $access)
 ```
 
 
+## Webhooks
+
+### Creating Webhooks
+
+To create a webhook, use the API class' "createWebhook" function
+
+Example:
+
+```
+
+$result = $this->sh->createWebhook('products/update', '/api/webhook/save');
+
+```
+
+To get all the webhook:
+
+```
+
+$resource = 'webhooks';
+$this->sh->addCallData('resource', $resource);
+$this->sh->addCallData('URL', 'admin/' . $resource);
+
+$result = $this->sh->listShopifyResources();
+
+```
