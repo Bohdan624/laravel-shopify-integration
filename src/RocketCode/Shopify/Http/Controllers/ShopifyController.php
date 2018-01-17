@@ -32,7 +32,7 @@ class ShopifyController extends Controller
         $code = $request->get('code');
         $data = array();
 
-        $this->shopSwitch($request->get('shop'));
+        $this->shopSwitch($request->get('shop'), true);
 
         try {
             $accessToken = $this->sh->getAccessToken($code);
