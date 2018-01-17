@@ -381,6 +381,7 @@ class API
      */
     public function createWebhook($topic, $address)
     {
+        $address = secure_url($address);
         // check if the webhook exists
         $result = $this->call([
             'URL' => self::PREFIX . '/webhooks.json',
@@ -415,6 +416,7 @@ class API
      */
     public function updateWebhook($id, $address)
     {
+        $address = secure_url($address);
         // get all the webhooks
         $result = $this->call([
             'URL' => self::PREFIX . '/webhooks.json',

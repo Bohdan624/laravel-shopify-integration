@@ -398,13 +398,18 @@ Example:
 
 ```
 
-$result = $this->sh->createWebhook('products/update', secure_url('/api/webhook/save'));
+$result = $this->sh->createWebhook('products/update', '/api/webhook/save');
+
+```
+
+To get all the webhook:
+
+```
 
 $resource = 'webhooks';
 $this->sh->addCallData('resource', $resource);
 $this->sh->addCallData('URL', 'admin/' . $resource);
 
 $result = $this->sh->listShopifyResources();
-print_r($result);
 
 ```
