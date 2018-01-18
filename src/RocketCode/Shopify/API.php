@@ -383,18 +383,14 @@ class API
     {
         $address = secure_url($address);
         // check if the webhook exists
-        $result = $this->call([
-            'URL' => self::PREFIX . '/webhooks.json',
-            'METHOD' => 'GET',
-            'DATA' => [
-                'topic' => $topic,
-                'address' => $address,
-                'format' => 'json',
-            ]
+        $webhooks = $this->getWebhooks([
+            'topic' => $topic,
+            'address' => $address,
+            'format' => 'json',
         ]);
 
         // create if it doesn't exist
-        if (empty($result->webhooks) && isset($result->webhooks)) {
+        if (empty($webhooks) && isset($webhooks)) {
             $this->call([
                 'URL' => self::PREFIX . '/webhooks.json',
                 'METHOD' => 'POST',
@@ -418,16 +414,9 @@ class API
     {
         $address = secure_url($address);
         // get all the webhooks
-        $result = $this->call([
-            'URL' => self::PREFIX . '/webhooks.json',
-            'METHOD' => 'GET',
-            'DATA' => [
-                'format' => 'json',
-            ]
-        ]);
-        
+        $webhooks = $this->getWebhooks();
         // check if the webhooks array has an item with the same id.
-        if (in_array(intval($id), array_column($result->webhooks, 'id'))) {
+        if (in_array(intval($id), array_column($webhooks, 'id'))) {
             // update the webhook
             $this->call([
                 'URL' => self::PREFIX . '/webhooks/' . intval($id) . '.json',
@@ -449,16 +438,9 @@ class API
     public function deleteWebhook($id)
     {
         // get all the webhooks
-        $result = $this->call([
-            'URL' => self::PREFIX . '/webhooks.json',
-            'METHOD' => 'GET',
-            'DATA' => [
-                'format' => 'json',
-            ]
-        ]);
-        
+        $webhooks = $this->getWebhooks();
         // check if the webhooks array has an item with the same id.
-        if (in_array(intval($id), array_column($result->webhooks, 'id'))) {
+        if (in_array(intval($id), array_column($webhooks, 'id'))) {
             // delete if webhook exists
             $this->call([
                 'URL' => self::PREFIX . '/webhooks/' . intval($id) . '.json',
@@ -474,11 +456,8 @@ class API
      */
     public function setupWebhooks(array $targetWebhooks)
     {
-        $call = $this->call([
-            'URL' => self::PREFIX . '/webhooks.json',
-            'METHOD' => 'GET',
-        ]);
-        foreach ($call->webhooks as $webhook) {
+        $webhooks = $this->getWebhooks();
+        foreach ($webhooks as $webhook) {
             if (!array_key_exists($webhook->topic, $targetWebhooks)) {
                 $this->deleteWebhook($webhook->id);
             } else {
@@ -491,6 +470,42 @@ class API
         foreach ($targetWebhooks as $topic => $address) {
             $this->createWebhook($topic, $address);
         }
+    }
+
+    /**
+     * Gets all the webhooks for the current $this->_API['SHOP_DOMAIN']
+     * @param Array $data_properties - the properties to be added to the 'DATA' array e.g. ['address' => 'http://address']
+     * $data_properties should be structured like so: e.g. ['topic' => 'products/create']
+     */
+    public function getWebhooks($data_properties = array())
+    {
+        $callData = [
+            'URL' => self::PREFIX . '/webhooks.json',
+            'METHOD' => 'GET',
+        ];
+        if (!empty($data_properties)) {
+            // initialising the DATA array to prevent error
+            $callData['DATA'] = [];
+            // adding each property to the DATA array
+            foreach ($data_properties as $property => $value) {
+                $callData['DATA'][$property] = $value;
+            }
+        }
+        $call = $this->call($callData);
+        return $call->webhooks;
+    }
+
+    /**
+     * @param String $shopify_domain
+     * @param Array $excluded_domains
+     */
+    public function cloneWebhooks($shopify_domain, $excluded_domains)
+    {
+        // get all the shops that are LIKE the base url of the current application. Also excluding the $excluded_domains array
+        $shops = Shop::whereNotIn('myshopify_domain', $excluded_domains)->get();
+        foreach ($shops as $shop) {
+        }
+        dd($shops);
     }
     
     public function callsMade()
