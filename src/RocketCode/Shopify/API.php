@@ -475,7 +475,7 @@ class API
     /**
      * Gets all the webhooks for the current $this->_API['SHOP_DOMAIN']
      * @param Array $data_properties - the properties to be added to the 'DATA' array e.g. ['address' => 'http://address']
-     * $data_properties should be structured like so: e.g. ['topic' => 'products/create']
+     * optional $data_properties should be structured like so: e.g. ['topic' => 'products/create']
      */
     public function getWebhooks($data_properties = array())
     {
