@@ -97,4 +97,28 @@ class ShopifyController extends Controller
             $this->sh->setup($setupArray);
         }
     }
+
+    /**
+     * Clones the webhooks from the given $shopify_domain while excluding the shops from $excluded_shops
+     * @param String $shopify_domain
+     * @param Array $excluded_shops
+     */
+    public function cloneWebhooks($shopify_domain, $excluded_shops = array())
+    {
+        // Switch to the given $shopify_domain
+        $this->shopSwitch($shopify_domain);
+        // Get all the webhooks for the current $shopify_domain
+        $webhooks = $this->sh->getWebhooks();
+        // format the webhooks to match the setupwebhooks function e.g. ['products/create' => 'http://address']
+        foreach ($webhooks as $webhook) {
+            $formatted_webhooks[$webhook->topic] = $webhook->address;
+        }
+        // Get all the shops while excluding the shops from $excluded_shops
+        $shops = Shop::whereNotIn('myshopify_domain', $excluded_shops)->get();
+        foreach ($shops as $shop) {
+            $this->shopSwitch($shop->myshopify_domain);
+            // passing in the webhooks to clone
+            $this->sh->setupWebhooks($formatted_webhooks);
+        }
+    }
 }
