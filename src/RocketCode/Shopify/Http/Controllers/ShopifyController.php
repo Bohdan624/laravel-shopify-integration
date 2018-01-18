@@ -47,7 +47,7 @@ class ShopifyController extends Controller
 
             $shop->save();
             
-            return view('success', compact('data'));
+            return view('shopify::success', compact('data'));
         } catch (Exception $e) {
             echo '<pre>Error: ' . $e->getMessage() . '</pre>';
         }
@@ -55,7 +55,7 @@ class ShopifyController extends Controller
 
     public function install(Request $request)
     {
-        return view('install');
+        return view('shopify::install');
     }
 
     /**

@@ -30,6 +30,6 @@ class SystemNotice extends Mailable
      */
     public function build()
     {
-        return $this->view('emails.notices.default')->with(['body' => $this->message]);
+        return $this->view('shopify::emails.notices.default')->with(['body' => $this->message]);
     }
 }

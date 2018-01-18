@@ -12,7 +12,7 @@
 */
 
 Route::get('/', function () {
-    return view('welcome');
+    return view('shopify::welcome');
 });
 Route::get('/install', 'RocketCode\Shopify\ShopifyController@install');
 Route::post('/install', 'RocketCode\Shopify\ShopifyController@getInstallUrl');
