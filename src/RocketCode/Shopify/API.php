@@ -576,6 +576,7 @@ class API
             $resource_array = $this->call($this->shopifyData, $this->shopifyData['DATA']);
             $merged_array = array_merge($merged_array, $resource_array->$resource);
         }
+        $this->resetData();
         return $merged_array;
     }
     
@@ -589,6 +590,7 @@ class API
         $currentShopifyData['URL'] = $this->shopifyData['PLURAL_NAME'] . '/count.json';
         
         $result = $this->call($currentShopifyData);
+        $this->resetData();
         return $result->count;
     }
     
@@ -723,6 +725,7 @@ class API
             // more than one record exists.
             die('Error');
         }
+        $this->resetData();
         return $result;
     }
 
@@ -753,6 +756,7 @@ class API
         } else {
             $result = $this->call($currentShopifyData);
         }
+        $this->resetData();
         return $result;
     }
 
@@ -773,6 +777,7 @@ class API
         $currentShopifyData['URL'] = self::PREFIX . '/' . $resource . '/' . $id . '.json';
 
         $result = $this->call($currentShopifyData, $currentShopifyData['DATA']);
+        $this->resetData();
         return $result;
     }
 
@@ -782,6 +787,7 @@ class API
     public function createRecord()
     {
         $result = $this->call($this->shopifyData, $this->shopifyData['DATA']);
+        $this->resetData();
         return $result;
     }
 
@@ -807,12 +813,15 @@ class API
 
             $result = $this->call($this->shopifyData);
 
+            $this->resetData();
             return $result;
         } elseif (count($result->$resource) < 1) {
             echo "Error: record doesn't exist";
             $mailto = 'it@cottonbabies.com';
             $message = new \stdClass();
             $message->error = "Error: record doesn't exist. Result: " . $result;
+
+            $this->resetData();
             
             Mail::to($mailto)->send(new SystemNotice($message));
         }
