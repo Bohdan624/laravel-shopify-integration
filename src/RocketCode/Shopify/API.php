@@ -740,8 +740,6 @@ class API
     public function getRecord($id)
     {
         $resource = $this->shopifyData['resource'];
-        $resource_singular = $this->shopifyData['SINGULAR_NAME'];
-        $property_value = $this->shopifyData['DATA'][$resource_singular][$property];
         // save the current shopifyData so we don't overwrite it
         $currentShopifyData = $this->shopifyData;
         $currentShopifyData = array_merge($currentShopifyData, $this->shopifyData);
