@@ -590,7 +590,7 @@ class API
         $currentShopifyData['URL'] = $this->shopifyData['PLURAL_NAME'] . '/count.json';
         
         $result = $this->call($currentShopifyData);
-        $this->resetData();
+
         return $result->count;
     }
     
@@ -681,6 +681,10 @@ class API
                     $this->shopifyData['PLURAL_NAME'] = 'custom_collections';
                     $this->shopifyData['SINGULAR_NAME'] = 'custom_collection';
                     break;
+                case 'collects':
+                    $this->shopifyData['PLURAL_NAME'] = 'collects';
+                    $this->shopifyData['SINGULAR_NAME'] = 'collect';
+                    break;
             }
     }
     
@@ -730,26 +734,19 @@ class API
     }
 
     /**
-     * Gets a record with the $property = $value
-     * e.g. admin/collects.json?product_id=293847 where 'product_id' is the $property and 293847 is $value
-     * @param String $value
-     * @param String $value
+     * Gets a record with the given $id e.g. products/$id.json
+     * @param int $id
      */
-    public function getRecord($compare_property, $value)
+    public function getRecord($id)
     {
-        // check if the compare_property is id, if so change it to ids
-        if ($compare_property == 'id') {
-            $compare_property_valid_name = 'ids';
-        } else {
-            $compare_property_valid_name = $compare_property;
-        }
-
+        $resource = $this->shopifyData['resource'];
+        $resource_singular = $this->shopifyData['SINGULAR_NAME'];
+        $property_value = $this->shopifyData['DATA'][$resource_singular][$property];
+        // save the current shopifyData so we don't overwrite it
         $currentShopifyData = $this->shopifyData;
         $currentShopifyData = array_merge($currentShopifyData, $this->shopifyData);
         $currentShopifyData['METHOD'] = 'GET';
-        $currentShopifyData['URL'] .= '?' . $compare_property_valid_name . '=' . $value;
-
-
+        $currentShopifyData['URL'] = self::PREFIX . '/' . $resource . '/' . $id . '.json';
         // Checks if the DATA array is set, if it isn't, do not pass it when calling
         if (isset($this->shopifyData['DATA'])) {
             $result = $this->call($currentShopifyData, $currentShopifyData['DATA']);
