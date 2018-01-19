@@ -727,6 +727,36 @@ class API
     }
 
     /**
+     * Gets a record with the $property = $value
+     * e.g. admin/collects.json?product_id=293847 where 'product_id' is the $property and 293847 is $value
+     * @param String $value
+     * @param String $value
+     */
+    public function getRecord($compare_property, $value)
+    {
+        // check if the compare_property is id, if so change it to ids
+        if ($compare_property == 'id') {
+            $compare_property_valid_name = 'ids';
+        } else {
+            $compare_property_valid_name = $compare_property;
+        }
+
+        $currentShopifyData = $this->shopifyData;
+        $currentShopifyData = array_merge($currentShopifyData, $this->shopifyData);
+        $currentShopifyData['METHOD'] = 'GET';
+        $currentShopifyData['URL'] .= '?' . $compare_property_valid_name . '=' . $value;
+
+
+        // Checks if the DATA array is set, if it isn't, do not pass it when calling
+        if (isset($this->shopifyData['DATA'])) {
+            $result = $this->call($currentShopifyData, $currentShopifyData['DATA']);
+        } else {
+            $result = $this->call($currentShopifyData);
+        }
+        return $result;
+    }
+
+    /**
      * Updates a record's $property with $proprety_value with the given $id
      * @param int $id The id of the record
      * @param string $property the property name
