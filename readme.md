@@ -19,7 +19,7 @@ Example:
 	]
 ```
 
-Add `"rocket-code/shopify": "dev-master"` in your "require" object.  
+Add `"rocket-code/shopify-cottonbabies": "~1.0"` in your "require" object.  
 
 Example:
 
@@ -28,11 +28,36 @@ Example:
 		"php": ">=5.6.4",
 		"laravel/framework": "5.4.*",
 		"laravel/tinker": "~1.0",
-		"rocket-code/shopify": "dev-master"
+		"rocket-code/shopify-cottonbabies": "~1.0"
 	}
 ```
+
+Add `"repositories"` section at the end of the composer.json file
+
+Example:
+
+```
+"repositories": [
+      {
+        "type": "package",
+        "package": {
+          "name": "rocket-code/shopify-cottonbabies",
+          "version": "1.0",
+          "source": {
+            "url": "https://bitbucket.org/cottonbabiesinc/laravel-shopify-api-wrapper.git",
+            "type": "git",
+            "reference": "master"
+          }
+        }
+      }
+    ]
+```
+
 #### Add the Service Provider
 In `app/config/app.php`, add `RocketCode\Shopify\ShopifyServiceProvider::class,` to the end of the `providers` array.
+
+#### Composer dump-autoload
+Run `composer dump-autoload`
 
 #### Add the Middleware
 In `app/http/kernel.php`, add `'shopify.webhook' => \RocketCode\Shopify\VerifyShopifyWebhook::class` to the end of the `$routeMiddleware` array.
