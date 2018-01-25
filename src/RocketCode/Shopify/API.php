@@ -382,12 +382,8 @@ class API
     public function exceptionNotice($exception)
     {
         $mailto = env('SHOPIFY_EMAIL_NOTICE');
-        $message = new \stdClass();
-        $message->error = $exception;
-
-        $this->resetData();
         
-        Mail::to($mailto)->send(new SystemNotice($message));
+        Mail::to($mailto)->send(new SystemNotice($exception));
     }
 
     /**
