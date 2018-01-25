@@ -966,7 +966,7 @@ class API
             Storage::makeDirectory($processed_dir);
         }
         // updating the modified date
-        touch($webhooks_dir . '/' . $file);
+        touch(storage_path() . '/app/' . $webhooks_dir . '/' . $file);
         // get the file name from the path
         $file_name = explode('/', $file);
         // get the last element which is the file name
