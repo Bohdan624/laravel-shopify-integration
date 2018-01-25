@@ -350,7 +350,8 @@ class API
         curl_close($ch);
 
         if ($_ERROR['NUMBER']) {
-            throw new \Exception('ERROR #' . $_ERROR['NUMBER'] . ': ' . $_ERROR['MESSAGE']);
+            // throw new \Exception('ERROR #' . $_ERROR['NUMBER'] . ': ' . $_ERROR['MESSAGE']);
+            $this->exceptionNotice('Error Number: ' . $_ERROR['NUMBER'] . ': ' . $_ERROR['MESSAGE']);
         }
 
 
@@ -372,6 +373,33 @@ class API
         } else {
             return $result;
         }
+    }
+
+    /**
+     * Sends out an email with the Exception Notice
+     * @param String $exception
+     */
+    public function exceptionNotice($exception)
+    {
+        $mailto = env('SHOPIFY_EMAIL_NOTICE');
+        $message = new \stdClass();
+        $message->error = $exception;
+
+        $this->resetData();
+        
+        Mail::to($mailto)->send(new SystemNotice($message));
+    }
+
+    /**
+     * Sends out an email with the Webhook Notice
+     * @param String $message
+     */
+    public function webhookNotice($message)
+    {
+        $mailto = env('SHOPIFY_EMAIL_NOTICE');
+        $message = new \stdClass;
+        $message->error = $message;
+        Mail::to($mailto)->send(new ShopifyWebhookNotice($message));
     }
 
     /**
@@ -494,19 +522,6 @@ class API
         $call = $this->call($callData);
         return $call->webhooks;
     }
-
-    /**
-     * @param String $shopify_domain
-     * @param Array $excluded_domains
-     */
-    public function cloneWebhooks($shopify_domain, $excluded_domains)
-    {
-        // get all the shops that are LIKE the base url of the current application. Also excluding the $excluded_domains array
-        $shops = Shop::whereNotIn('myshopify_domain', $excluded_domains)->get();
-        foreach ($shops as $shop) {
-        }
-        dd($shops);
-    }
     
     public function callsMade()
     {
@@ -549,7 +564,11 @@ class API
         return (int) $params[$index];
     }
     
-    public function listShopifyResources()
+    /**
+     * Returns a list of the given resource
+     * @param boolean $resetData -  whether to reset the data or not
+     */
+    public function listShopifyResources($resetData = true)
     {
         try {
             // Checks if the DATA array is set, if it isn't, do not pass it when calling
@@ -559,7 +578,9 @@ class API
                 $result = $this->call($this->shopifyData);
             }
             
-            $this->resetData();
+            if ($resetData) {
+                $this->resetData();
+            }
             
             return $result;
         } catch (Exception $e) {
@@ -573,6 +594,7 @@ class API
         $pages = ceil($count / $this->shopifyData['DATA']['limit']);
         $merged_array = array();
         for ($page = 1; $page <= $pages; $page++) {
+            $this->addData('page', $page);
             $resource_array = $this->call($this->shopifyData, $this->shopifyData['DATA']);
             $merged_array = array_merge($merged_array, $resource_array->$resource);
         }
@@ -588,9 +610,7 @@ class API
     {
         $currentShopifyData = $this->shopifyData;
         $currentShopifyData['URL'] = $this->shopifyData['PLURAL_NAME'] . '/count.json';
-        
         $result = $this->call($currentShopifyData);
-
         return $result->count;
     }
     
@@ -681,16 +701,44 @@ class API
                     $this->shopifyData['PLURAL_NAME'] = 'custom_collections';
                     $this->shopifyData['SINGULAR_NAME'] = 'custom_collection';
                     break;
+                case 'smart_collections':
+                    $this->shopifyData['PLURAL_NAME'] = 'smart_collections';
+                    $this->shopifyData['SINGULAR_NAME'] = 'smart_collection';
+                    break;
                 case 'collects':
                     $this->shopifyData['PLURAL_NAME'] = 'collects';
                     $this->shopifyData['SINGULAR_NAME'] = 'collect';
                     break;
+                case 'collections':
+                    $this->shopifyData['PLURAL_NAME'] = 'collections';
+                    $this->shopifyData['SINGULAR_NAME'] = 'collection';
+                    break;
             }
     }
     
-    public function getShopifyData()
+    /**
+     * Returns shopifyData or specified shopifyData's property
+     * Goes only 1 level deep, so it will only return callData property not 'DATA' property
+     * @param String $property - default null - the property to get
+     */
+    public function getShopifyData($property = null)
     {
+        if (!isset($this->shopifyData)) {
+            return false;
+        }
+        if (isset($property)) {
+            return $this->shopifyData[$property];
+        }
         return $this->shopifyData;
+    }
+
+    /**
+     * Sets the given $data as the shopifyData
+     * @param Array $data - the new shopifyData
+     */
+    public function setShopifyData($data = array())
+    {
+        return $this->shopifyData = $data;
     }
 
     /**
@@ -760,16 +808,23 @@ class API
      * @param int $id The id of the record
      * @param string $property the property name
     **/
-    public function updateRecord($id, $property)
+    public function updateRecord($id)
     {
         $resource = $this->shopifyData['resource'];
-        $resource_singular = $this->shopifyData['SINGULAR_NAME'];
-        $property_value = $this->shopifyData['DATA'][$resource_singular][$property];
-
         $currentShopifyData = $this->shopifyData;
         $currentShopifyData = array_merge($currentShopifyData, $this->shopifyData);
         $currentShopifyData['METHOD'] = 'PUT';
-        $currentShopifyData['URL'] = self::PREFIX . '/' . $resource . '/' . $id . '.json';
+
+        switch ($resource) {
+            case 'smart_collections':
+                // if smart_collections, determine whether to use order.json or #id.json
+                if (array_has($currentShopifyData['DATA'], ['sort_order', 'products'])) {
+                    $currentShopifyData['URL'] = self::PREFIX . '/' . $resource . '/' . $id . '/order.json';
+                }
+                break;
+            default:
+                $currentShopifyData['URL'] = self::PREFIX . '/' . $resource . '/' . $id . '.json';
+        }
 
         $result = $this->call($currentShopifyData, $currentShopifyData['DATA']);
         $this->resetData();
@@ -781,6 +836,8 @@ class API
      */
     public function createRecord()
     {
+        // setting method to post as it's creating
+        $this->shopifyData['METHOD'] = 'POST';
         $result = $this->call($this->shopifyData, $this->shopifyData['DATA']);
         $this->resetData();
         return $result;
@@ -796,13 +853,19 @@ class API
         $currentShopifyData = $this->shopifyData;
         $currentShopifyData = array_merge($currentShopifyData, $this->shopifyData);
         $currentShopifyData['METHOD'] = 'GET';
-        $compare_property_name = 'ids';
-        $currentShopifyData['URL'] .= '?' . $compare_property_name . '=' . urlencode($compare_property_value);
-
+        switch ($this->shopifyData['resource']) {
+            case 'collects':
+                $compare_property_name = 'id';
+                $currentShopifyData['URL'] = 'admin/' . $resource . '/' . $id . '.json';
+                break;
+            default:
+                $compare_property_name = 'ids';
+                $currentShopifyData['URL'] .= '?' . $compare_property_name . '=' . urlencode($compare_property_value);
+        }
+        
         $result = $this->call($currentShopifyData);
-
         // delete the record if it exists
-        if (count($result->$resource) == 1) {
+        if ((isset($result->$resource) && count($result->$resource) == 1) || $result->$resource_singular) {
             $this->shopifyData['METHOD'] = 'DELETE';
             $this->shopifyData['URL'] = 'admin/' . $resource . '/' . $id . '.json';
 
@@ -810,15 +873,9 @@ class API
 
             $this->resetData();
             return $result;
-        } elseif (count($result->$resource) < 1) {
-            echo "Error: record doesn't exist";
-            $mailto = 'it@cottonbabies.com';
-            $message = new \stdClass();
-            $message->error = "Error: record doesn't exist. Result: " . $result;
-
-            $this->resetData();
-            
-            Mail::to($mailto)->send(new SystemNotice($message));
+        } elseif (isset($result->$resource) && count($result->$resource) < 1) {
+            $error = "Error: record doesn't exist";
+            exceptionNotice($error);
         }
     }
 
@@ -881,10 +938,7 @@ class API
             $dest_file = $this->archive_dir . '/' . $updated_name;
             Storage::move($src_file, $dest_file);
             // send an email of the error log
-            $mailto = 'it@cottonbabies.com';
-            $message = new \stdClass;
-            $message->error = $data;
-            Mail::to($mailto)->send(new ShopifyWebhookNotice($message));
+            $this->webhookNotice($data);
         }
     }
 
@@ -965,5 +1019,58 @@ class API
     {
         $calculated_hmac = base64_encode(hash_hmac('sha256', $data, env('SHOPIFY_APP_SECRET'), true));
         return ($hmac_header == $calculated_hmac);
+    }
+
+    /**
+     * Adds or deletes tags from the given $tags string
+     * @param String $tags a string of all the tags e.g. 'cb_feed_facebook, cb_feed_google'
+     * @param String $tag the new tag to add and check against
+     * @param String $action the action e.g. add or delete
+     */
+    public function manageTag($tags, $new_tags, $action, $prefix_tag_name = false)
+    {
+        $retVal = [];
+        $tags = explode(", ", $tags);
+        
+        // iterate through the new tags
+        foreach ($new_tags as $tag) {
+            $match = preg_grep("/^" . $prefix_tag_name . ".*/", $tags);
+            if (!empty($match)) {
+                foreach ($match as $key => $value) {
+                    unset($tags[$key]);
+                }
+            }
+            if ($action == 'add') {
+                if (!in_array($tag, $tags)) {
+                    $retVal[] = $tag;
+                }
+            } elseif ($action == 'delete') {
+                // delete may not work properly due to the match unset on line 993
+                if (in_array($tag, $tags)) {
+                    // find the key to unset from the array
+                    $key = array_search($tag, $tags);
+                    unset($tags[$key]);
+                }
+            }
+        }
+        $retVal = array_merge($retVal, $tags);
+        $retVal = array_filter($retVal);
+        $retVal = implode(", ", $retVal);
+        return $retVal;
+    }
+
+    /**
+     * Checks if the given $tags string contains $tag
+     * @param String $tags the tags string e.g. 'cb_feed_facebook, cb_feed_google'
+     * @param String $tag the tag to search in the tags
+     */
+    public function hasTag($tags, $tag)
+    {
+        $retVal = false;
+        $tags = explode(", ", $tags);
+        if (in_array($tag, $tags)) {
+            $retVal = true;
+        }
+        return $retVal;
     }
 } // End of API class

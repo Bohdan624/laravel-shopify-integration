@@ -6,8 +6,8 @@ use Illuminate\Support\Facades\App;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Log;
-use App\Shop;
-use App\ShopQueueLog;
+use RocketCode\Shopify\Shop;
+use RocketCode\Shopify\ShopQueueLog;
 use Mail;
 use RocketCode\Shopify\SystemNotice;
 
@@ -30,13 +30,19 @@ class ShopifyQueueController extends ShopifyController
     {
         $this->controller = $controller;
         $this->controller_function = $controller_function;
-        $resource = $controller->resource;
+
+        $shopifyData = $controller->sh->getShopifyData();
+        $resource = $shopifyData['resource'];
+
+        // check if the resource is a smart/custom collection
+        $collection_resource = (strpos($resource, 'collection') !== false);
+
         Log::info('Shopify Queue Log Started: ' . get_class($this->controller) . ' : ' . $controller_function);
 
         $shops = Shop::all();
 
         foreach ($shops as $shop) {
-            $this->shopSwitch($shop->myshopify_domain);
+            $controller->shopSwitch($shop->myshopify_domain);
             echo $shop->myshopify_domain . '<br>';
 
             /**
@@ -62,50 +68,101 @@ class ShopifyQueueController extends ShopifyController
                 continue;
             } elseif ($shopQueueLog->since_id > 0) {
                 $since_id = $shopQueueLog->since_id;
+            } elseif ($shopQueueLog->page > 0) {
+                $page = $shopQueueLog->page;
             }
 
-            $time_start = microtime(true);
             $force_stop = false; // forces the while to stop when true
-            $counter = 0;
+            $page_counter = 1;
+            $record_counter = 0;
 
-            while ($force_stop <> true && $counter <= $max_records) {
-                if (isset($shopQueueLog->since_id)) {
+            // if resource is any collection we count by page
+            if ($collection_resource) {
+                $counter_variable = $page_counter;
+            } else {
+                $counter_variable = $record_counter;
+            }
+
+            while ($force_stop <> true && $counter_variable <= $max_records) {
+                // setting the original callData/Data to this->sh because they may get reset
+                $controller->sh->setShopifyData($shopifyData);
+                // if running first time - when there's no record in database
+                if (isset($shopQueueLog->since_id) || isset($shopQueueLog->page)) {
                     $shop->fresh(); // resets the object after each iteration to ensure its "fresh"
-                    $since_id = $shopQueueLog->since_id;
-                    $this->sh->addData('since_id', $since_id);
-                } else {
-                    $this->sh->addData('order', 'created_at%20asc');
+                    // if smart or custom_collection
+                    if ($collection_resource) {
+                        $page = $shopQueueLog->page;
+                        $controller->sh->addData('page', $page);
+                    } else {
+                        $since_id = $shopQueueLog->since_id;
+                        $controller->sh->addData('since_id', $since_id);
+                    }
+                }
+                // when running after first time
+                else {
+                    // if smart or custom_collection
+                    if ($collection_resource) {
+                        // start at the first page
+                        $controller->sh->addData('page', $page_counter);
+                    } else {
+                        $controller->sh->addData('since_id', 0);
+                    }
                 }
 
-                $api_results = $controller->sh->listShopifyResources();
+                $api_results = $controller->sh->listShopifyResources(false);
 
                 if (sizeof($api_results->$resource) == 0) {
                     $force_stop = true;
-                    continue;
+                    $processed = true;
+                    break;
                 }
 
                 foreach ($api_results->$resource as $result) {
-                    $this->controller->$controller_function($result);
+                    $this->controller->$controller_function($resource, $result);
                     $since_id = $result->id;
 
-                    if ($counter >= $max_records) {
-                        $force_stop = true;
-                        break;
+                    // if ($record_counter == 3) {
+                    //     dd();
+                    // }
+
+                    // if not smart or custom_collection e.g. products
+                    if (!$collection_resource) {
+                        if ($record_counter >= $max_records) {
+                            $force_stop = true;
+                            $processed = false;
+                            continue;
+                        }
+                        $shopQueueLog->since_id = (string) $since_id;
                     }
 
-                    $shopQueueLog->since_id = (string) $since_id;
-
                     $shopQueueLog->increment('counter', 1);
-                    $counter++;
+                    $record_counter++;
                     $shopQueueLog->save();
+                    // save the record_counter value to the counter_variable value so it doesn't reset to 0
+                    if (!$collection_resource) {
+                        $counter_variable = $record_counter;
+                    }
+                } // foreach end
+                if ($collection_resource) {
+                    // increment page and save it to the database
+                    $page_counter++;
+                    if (isset($shopQueueLog->page)) {
+                        $shopQueueLog->increment('page', 1);
+                    } else {
+                        // when running first time, increment by 2 so it starts from page 2 next time
+                        $shopQueueLog->increment('page', $page_counter);
+                    }
+                    $shopQueueLog->save();
+                    // save the page_counter value to the counter_variable value so it doesn't reset to 1
+                    $counter_variable = $page_counter;
                 }
-            }
-            $time_end = microtime(true);
-            $time = $time_end - $time_start;
+            } // while end
 
             // If $force_stop is true we mark the queue as processed and save to the database.
             if ($force_stop) {
-                $shopQueueLog->processed = 1;
+                if ($processed) {
+                    $shopQueueLog->processed = 1;
+                }
                 $shopQueueLog->save();
                 $this->validateQueue($shopQueueLog, $shop, true);
             }

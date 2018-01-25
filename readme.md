@@ -64,11 +64,13 @@ In `app/http/kernel.php`, add `'shopify.webhook' => \RocketCode\Shopify\VerifySh
 
 ## Setting Up
 
-In `.env`, add these three entries:
+In `.env`, add these Four entries:
  
  * `SHOPIFY_APP_ID` with your Shopify App *API key*
  * `SHOPIFY_APP_SECRET` with your Shopify App *Secret* (which, for private apps, is not the same as the *Password*)
  * `SHOPIFY_APP_REDIRECT` with your whitelisted redirection URL, in case you are a pubblic app using OAuth
+
+ * `SHOPIFY_EMAIL_NOTICE` with your email address to receive notices
  
  Example:
  
@@ -76,6 +78,7 @@ In `.env`, add these three entries:
 SHOPIFY_APP_ID=000102030405060708090a0b0c0d0e0f
 SHOPIFY_APP_SECRET=101112131415161718191a1b1c1d1e1f
 SHOPIFY_APP_REDIRECT=https://example.com/oauth
+SHOPIFY_EMAIL_NOTICE=example@cottonbabies.com
  ```
 
 To begin, use `App::make()` to grab an instance of the `API` class.
