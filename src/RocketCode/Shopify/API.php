@@ -775,7 +775,7 @@ class API
             $result = $this->createRecord();
         } elseif (count($result->$resource) > 1) {
             // more than one record exists.
-            die('Error');
+            $this->exceptionNotice("Error: More than one record exists");
         }
         $this->resetData();
         return $result;
