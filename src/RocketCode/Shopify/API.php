@@ -12,7 +12,7 @@ use Log;
 use Illuminate\Http\Request;
 use Mail;
 use RocketCode\Shopify\ShopifyWebhookNotice;
-use RocketCode\Shopify\SystemNotice;
+use RocketCode\Shopify\ExceptionNotice;
 
 class API
 {
@@ -383,7 +383,7 @@ class API
     {
         $mailto = env('SHOPIFY_EMAIL_NOTICE');
         
-        Mail::to($mailto)->send(new SystemNotice($exception));
+        Mail::to($mailto)->send(new ExceptionNotice($exception));
     }
 
     /**
