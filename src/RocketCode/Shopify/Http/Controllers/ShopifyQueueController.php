@@ -79,33 +79,36 @@ class ShopifyQueueController extends ShopifyController
             // if resource is any collection we count by page
             if ($collection_resource) {
                 $counter_variable = $page_counter;
+                $counter_type = 'page';
             } else {
                 $counter_variable = $record_counter;
+                $counter_type = 'since_id';
             }
 
             while ($force_stop <> true && $counter_variable <= $max_records) {
                 // setting the original callData/Data to this->sh because they may get reset
                 $controller->sh->setShopifyData($shopifyData);
-                // if running first time - when there's no record in database
+                // when running after first time
                 if (isset($shopQueueLog->since_id) || isset($shopQueueLog->page)) {
                     $shop->fresh(); // resets the object after each iteration to ensure its "fresh"
-                    // if smart or custom_collection
+                    // setting counter_type and counter_value
                     if ($collection_resource) {
                         $page = $shopQueueLog->page;
-                        $controller->sh->addData('page', $page);
+                        $counter_value = $page;
                     } else {
                         $since_id = $shopQueueLog->since_id;
-                        $controller->sh->addData('since_id', $since_id);
+                        $counter_value = $since_id;
                     }
+                    $controller->sh->addData($counter_type, $counter_value);
                 }
-                // when running after first time
+                // if running first time - when there's no record in database
                 else {
                     // if smart or custom_collection
                     if ($collection_resource) {
                         // start at the first page
-                        $controller->sh->addData('page', $page_counter);
+                        $controller->sh->addData($counter_type, $page_counter);
                     } else {
-                        $controller->sh->addData('since_id', 0);
+                        $controller->sh->addData($counter_type, 0);
                     }
                 }
 
@@ -120,10 +123,6 @@ class ShopifyQueueController extends ShopifyController
                 foreach ($api_results->$resource as $result) {
                     $this->controller->$controller_function($resource, $result);
                     $since_id = $result->id;
-
-                    // if ($record_counter == 3) {
-                    //     dd();
-                    // }
 
                     // if not smart or custom_collection e.g. products
                     if (!$collection_resource) {
