@@ -39,7 +39,7 @@ class ShopifyServiceProvider extends ServiceProvider
         // incorporating the Routes, Views, Migrations to the package
         $this->loadMigrationsFrom(__DIR__.'/migrations');
         $this->loadRoutesFrom(__DIR__.'/routes/web.php');
-        $this->loadViewsFrom(__DIR__.'/views', 'shopify_api_wrapper');
+        $this->loadViewsFrom(__DIR__.'/views', 'shopify');
 
         $this->app->booted(function () {
             $schedule = app(Schedule::class);
