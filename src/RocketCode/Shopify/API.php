@@ -1118,4 +1118,50 @@ class API
         }
         return $retVal;
     }
+
+
+    /**
+     * Creates a metafield for the given $resource with the given $resource_id and $value
+     * @param String $resource
+     * @param int $resource_id
+     * @param String $value
+     */
+    public function createMetafield($resource, $resource_id, $value)
+    {
+        $this->sh->addCallData('resource', 'metafields');
+        $this->sh->addCallData('URL', 'admin/' . $resource . '/' . $resource_id . '/metafields');
+        $this->sh->buildChildData('namespace', 'cottonbabies');
+        $this->sh->buildChildData('key', 'orig_sort_order');
+        $this->sh->buildChildData('value', $value);
+        $this->sh->buildChildData('value_type', 'string');
+        $this->sh->commitChildData();
+        $this->sh->createRecord();
+    }
+
+    /**
+     * Deletes a metafield from the given $resource (e.g. collections) by the $metafield_id
+     * @param String $resource
+     * @param Object $resource_id
+     * @param int $metafield_id
+     */
+    public function deleteMetafield($resource, $resource_id, $metafield_id)
+    {
+        $this->sh->addCallData('resource', 'metafields');
+        $this->sh->addCallData('URL', 'admin/' . $resource . '/' . $resource_id . '/metafields/' . $metafield_id);
+        $this->sh->deleteRecord($metafield_id);
+    }
+
+    /**
+     * Updates the tags of a product to the given $tags
+     * @param int $resource_id
+     * @param String $resource
+     * @param String $tags
+     */
+    public function updateTags($resource_id, $resource, $tags)
+    {
+        $this->sh->addCallData('resource', $resource);
+        $this->sh->buildChildData('tags', $tags);
+        $this->sh->commitChildData();
+        $this->sh->updateRecord($resource_id);
+    }
 } // End of API class
