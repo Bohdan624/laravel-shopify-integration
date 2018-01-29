@@ -1079,6 +1079,10 @@ class API
         return $retVal;
     }
 
+    /**
+     * Gets a specific metafield by it's $id
+     * @param int $id
+     */
     public function getMetafield($id)
     {
         $resource = $this->shopifyData['resource'];
@@ -1097,6 +1101,13 @@ class API
         return reset($result);
     }
 
+    /**
+     * Checks of a metafield with the given $namespace and $key exists
+     * Returns the metafield object if found
+     * @param Array of metafield objects
+     * @param String $namespace
+     * @param String $key
+     */
     public function metafieldExists($metafields, $namespace, $key)
     {
         $retVal = false;
