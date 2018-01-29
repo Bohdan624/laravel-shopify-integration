@@ -1128,14 +1128,14 @@ class API
      */
     public function createMetafield($resource, $resource_id, $value)
     {
-        $this->sh->addCallData('resource', 'metafields');
-        $this->sh->addCallData('URL', 'admin/' . $resource . '/' . $resource_id . '/metafields');
-        $this->sh->buildChildData('namespace', 'cottonbabies');
-        $this->sh->buildChildData('key', 'orig_sort_order');
-        $this->sh->buildChildData('value', $value);
-        $this->sh->buildChildData('value_type', 'string');
-        $this->sh->commitChildData();
-        $this->sh->createRecord();
+        $this->addCallData('resource', 'metafields');
+        $this->addCallData('URL', 'admin/' . $resource . '/' . $resource_id . '/metafields');
+        $this->buildChildData('namespace', 'cottonbabies');
+        $this->buildChildData('key', 'orig_sort_order');
+        $this->buildChildData('value', $value);
+        $this->buildChildData('value_type', 'string');
+        $this->commitChildData();
+        $this->createRecord();
     }
 
     /**
@@ -1146,9 +1146,9 @@ class API
      */
     public function deleteMetafield($resource, $resource_id, $metafield_id)
     {
-        $this->sh->addCallData('resource', 'metafields');
-        $this->sh->addCallData('URL', 'admin/' . $resource . '/' . $resource_id . '/metafields/' . $metafield_id);
-        $this->sh->deleteRecord($metafield_id);
+        $this->addCallData('resource', 'metafields');
+        $this->addCallData('URL', 'admin/' . $resource . '/' . $resource_id . '/metafields/' . $metafield_id);
+        $this->deleteRecord($metafield_id);
     }
 
     /**
@@ -1159,9 +1159,9 @@ class API
      */
     public function updateTags($resource_id, $resource, $tags)
     {
-        $this->sh->addCallData('resource', $resource);
-        $this->sh->buildChildData('tags', $tags);
-        $this->sh->commitChildData();
-        $this->sh->updateRecord($resource_id);
+        $this->addCallData('resource', $resource);
+        $this->buildChildData('tags', $tags);
+        $this->commitChildData();
+        $this->updateRecord($resource_id);
     }
 } // End of API class
