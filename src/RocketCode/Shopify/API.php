@@ -753,7 +753,6 @@ class API
         $compare_property_value = $this->shopifyData['DATA'][$resource_singular][$compare_property];
 
         $currentShopifyData = $this->shopifyData;
-        $currentShopifyData = array_merge($currentShopifyData, $this->shopifyData);
         $currentShopifyData['METHOD'] = 'GET';
 
         if ($compare_property == 'id') {
@@ -790,7 +789,6 @@ class API
         $resource = $this->shopifyData['resource'];
         // save the current shopifyData so we don't overwrite it
         $currentShopifyData = $this->shopifyData;
-        $currentShopifyData = array_merge($currentShopifyData, $this->shopifyData);
         $currentShopifyData['METHOD'] = 'GET';
         $currentShopifyData['URL'] = self::PREFIX . '/' . $resource . '/' . $id . '.json';
         // Checks if the DATA array is set, if it isn't, do not pass it when calling
@@ -812,7 +810,6 @@ class API
     {
         $resource = $this->shopifyData['resource'];
         $currentShopifyData = $this->shopifyData;
-        $currentShopifyData = array_merge($currentShopifyData, $this->shopifyData);
         $currentShopifyData['METHOD'] = 'PUT';
 
         switch ($resource) {
@@ -851,7 +848,6 @@ class API
         $compare_property_value = $id;
 
         $currentShopifyData = $this->shopifyData;
-        $currentShopifyData = array_merge($currentShopifyData, $this->shopifyData);
         $currentShopifyData['METHOD'] = 'GET';
         switch ($this->shopifyData['resource']) {
             case 'collects':
@@ -1072,8 +1068,7 @@ class API
     public function hasTag($tags, $tag)
     {
         $retVal = false;
-        $tags = explode(", ", $tags);
-        if (in_array($tag, $tags)) {
+        if (strpos($tags, $tag) !== false) {
             $retVal = true;
         }
         return $retVal;
@@ -1088,7 +1083,6 @@ class API
         $resource = $this->shopifyData['resource'];
         // save the current shopifyData so we don't overwrite it
         $currentShopifyData = $this->shopifyData;
-        $currentShopifyData = array_merge($currentShopifyData, $this->shopifyData);
         $currentShopifyData['METHOD'] = 'GET';
         $currentShopifyData['URL'] = self::PREFIX . '/' . $resource . '/' . $id . '/metafields.json';
         // Checks if the DATA array is set, if it isn't, do not pass it when calling
@@ -1102,8 +1096,8 @@ class API
     }
 
     /**
-     * Checks of a metafield with the given $namespace and $key exists
-     * Returns the metafield object if found
+     * Checks if a metafield with the given $namespace and $key exists
+     * @Returns the found metafield object. Defaults to false
      * @param Array of metafield objects
      * @param String $namespace
      * @param String $key
@@ -1152,7 +1146,7 @@ class API
     }
 
     /**
-     * Updates the tags of a product to the given $tags
+     * Updates the tags of a resource to the given $tags
      * @param int $resource_id
      * @param String $resource
      * @param String $tags
