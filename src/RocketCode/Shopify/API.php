@@ -709,6 +709,10 @@ class API
                     $this->shopifyData['PLURAL_NAME'] = 'collections';
                     $this->shopifyData['SINGULAR_NAME'] = 'collection';
                     break;
+                case 'metafields':
+                    $this->shopifyData['PLURAL_NAME'] = 'metafields';
+                    $this->shopifyData['SINGULAR_NAME'] = 'metafield';
+                    break;
             }
     }
     
@@ -853,6 +857,10 @@ class API
             case 'collects':
                 $compare_property_name = 'id';
                 $currentShopifyData['URL'] = 'admin/' . $resource . '/' . $id . '.json';
+                break;
+            case 'metafields':
+                // metafields requires a resource id and metafield id, therefore, we're setting the URL from where it's being called
+                $currentShopifyData['URL'] = $currentShopifyData['URL'];
                 break;
             default:
                 $compare_property_name = 'ids';
@@ -1030,10 +1038,12 @@ class API
         
         // iterate through the new tags
         foreach ($new_tags as $tag) {
-            $match = preg_grep("/^" . $prefix_tag_name . ".*/", $tags);
-            if (!empty($match)) {
-                foreach ($match as $key => $value) {
-                    unset($tags[$key]);
+            if ($prefix_tag_name) {
+                $match = preg_grep("/^" . $prefix_tag_name . ".*/", $tags);
+                if (!empty($match)) {
+                    foreach ($match as $key => $value) {
+                        unset($tags[$key]);
+                    }
                 }
             }
             if ($action == 'add') {
@@ -1041,7 +1051,6 @@ class API
                     $retVal[] = $tag;
                 }
             } elseif ($action == 'delete') {
-                // delete may not work properly due to the match unset on line 993
                 if (in_array($tag, $tags)) {
                     // find the key to unset from the array
                     $key = array_search($tag, $tags);
@@ -1066,6 +1075,35 @@ class API
         $tags = explode(", ", $tags);
         if (in_array($tag, $tags)) {
             $retVal = true;
+        }
+        return $retVal;
+    }
+
+    public function getMetafield($id)
+    {
+        $resource = $this->shopifyData['resource'];
+        // save the current shopifyData so we don't overwrite it
+        $currentShopifyData = $this->shopifyData;
+        $currentShopifyData = array_merge($currentShopifyData, $this->shopifyData);
+        $currentShopifyData['METHOD'] = 'GET';
+        $currentShopifyData['URL'] = self::PREFIX . '/' . $resource . '/' . $id . '/metafields.json';
+        // Checks if the DATA array is set, if it isn't, do not pass it when calling
+        if (isset($this->shopifyData['DATA'])) {
+            $result = $this->call($currentShopifyData, $currentShopifyData['DATA']);
+        } else {
+            $result = $this->call($currentShopifyData);
+        }
+        $this->resetData();
+        return reset($result);
+    }
+
+    public function metafieldExists($metafields, $namespace, $key)
+    {
+        $retVal = false;
+        foreach ($metafields as $metafield) {
+            if ($metafield->namespace == $namespace && $metafield->key == $key) {
+                $retVal = $metafield;
+            }
         }
         return $retVal;
     }
