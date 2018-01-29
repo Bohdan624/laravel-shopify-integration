@@ -172,7 +172,7 @@ class ShopifyQueueController extends ShopifyController
     public function validateQueue($shopQueueLog, $shop, $done = false)
     {
         if ($shopQueueLog) {
-            $mailto = 'it@cottonbabies.com';
+            $mailto = env('SHOPIFY_EMAIL_NOTICE');
 
             $message = new \stdClass();
             $message->created_at = $shopQueueLog->created_at;
@@ -186,7 +186,7 @@ class ShopifyQueueController extends ShopifyController
             }
             return 'continue';
         } else {
-            $mailto = 'it@cottonbabies.com';
+            $mailto = env('SHOPIFY_EMAIL_NOTICE');
 
             $shopQueueLogData = array(
                 'shop_id' => $shop->id,

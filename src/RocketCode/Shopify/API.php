@@ -12,7 +12,7 @@ use Log;
 use Illuminate\Http\Request;
 use Mail;
 use RocketCode\Shopify\ShopifyWebhookNotice;
-use RocketCode\Shopify\SystemNotice;
+use RocketCode\Shopify\ExceptionNotice;
 
 class API
 {
@@ -382,12 +382,8 @@ class API
     public function exceptionNotice($exception)
     {
         $mailto = env('SHOPIFY_EMAIL_NOTICE');
-        $message = new \stdClass();
-        $message->error = $exception;
-
-        $this->resetData();
         
-        Mail::to($mailto)->send(new SystemNotice($message));
+        Mail::to($mailto)->send(new ExceptionNotice($exception));
     }
 
     /**
@@ -713,6 +709,10 @@ class API
                     $this->shopifyData['PLURAL_NAME'] = 'collections';
                     $this->shopifyData['SINGULAR_NAME'] = 'collection';
                     break;
+                case 'metafields':
+                    $this->shopifyData['PLURAL_NAME'] = 'metafields';
+                    $this->shopifyData['SINGULAR_NAME'] = 'metafield';
+                    break;
             }
     }
     
@@ -753,7 +753,6 @@ class API
         $compare_property_value = $this->shopifyData['DATA'][$resource_singular][$compare_property];
 
         $currentShopifyData = $this->shopifyData;
-        $currentShopifyData = array_merge($currentShopifyData, $this->shopifyData);
         $currentShopifyData['METHOD'] = 'GET';
 
         if ($compare_property == 'id') {
@@ -790,7 +789,6 @@ class API
         $resource = $this->shopifyData['resource'];
         // save the current shopifyData so we don't overwrite it
         $currentShopifyData = $this->shopifyData;
-        $currentShopifyData = array_merge($currentShopifyData, $this->shopifyData);
         $currentShopifyData['METHOD'] = 'GET';
         $currentShopifyData['URL'] = self::PREFIX . '/' . $resource . '/' . $id . '.json';
         // Checks if the DATA array is set, if it isn't, do not pass it when calling
@@ -812,7 +810,6 @@ class API
     {
         $resource = $this->shopifyData['resource'];
         $currentShopifyData = $this->shopifyData;
-        $currentShopifyData = array_merge($currentShopifyData, $this->shopifyData);
         $currentShopifyData['METHOD'] = 'PUT';
 
         switch ($resource) {
@@ -851,12 +848,15 @@ class API
         $compare_property_value = $id;
 
         $currentShopifyData = $this->shopifyData;
-        $currentShopifyData = array_merge($currentShopifyData, $this->shopifyData);
         $currentShopifyData['METHOD'] = 'GET';
         switch ($this->shopifyData['resource']) {
             case 'collects':
                 $compare_property_name = 'id';
                 $currentShopifyData['URL'] = 'admin/' . $resource . '/' . $id . '.json';
+                break;
+            case 'metafields':
+                // metafields requires a resource id and metafield id, therefore, we're setting the URL from where it's being called
+                $currentShopifyData['URL'] = $currentShopifyData['URL'];
                 break;
             default:
                 $compare_property_name = 'ids';
@@ -970,7 +970,7 @@ class API
             Storage::makeDirectory($processed_dir);
         }
         // updating the modified date
-        touch($webhooks_dir . '/' . $file);
+        touch(storage_path() . '/app/' . $webhooks_dir . '/' . $file);
         // get the file name from the path
         $file_name = explode('/', $file);
         // get the last element which is the file name
@@ -1034,10 +1034,12 @@ class API
         
         // iterate through the new tags
         foreach ($new_tags as $tag) {
-            $match = preg_grep("/^" . $prefix_tag_name . ".*/", $tags);
-            if (!empty($match)) {
-                foreach ($match as $key => $value) {
-                    unset($tags[$key]);
+            if ($prefix_tag_name) {
+                $match = preg_grep("/^" . $prefix_tag_name . ".*/", $tags);
+                if (!empty($match)) {
+                    foreach ($match as $key => $value) {
+                        unset($tags[$key]);
+                    }
                 }
             }
             if ($action == 'add') {
@@ -1045,7 +1047,6 @@ class API
                     $retVal[] = $tag;
                 }
             } elseif ($action == 'delete') {
-                // delete may not work properly due to the match unset on line 993
                 if (in_array($tag, $tags)) {
                     // find the key to unset from the array
                     $key = array_search($tag, $tags);
@@ -1067,10 +1068,94 @@ class API
     public function hasTag($tags, $tag)
     {
         $retVal = false;
-        $tags = explode(", ", $tags);
-        if (in_array($tag, $tags)) {
+        if (strpos($tags, $tag) !== false) {
             $retVal = true;
         }
         return $retVal;
+    }
+
+    /**
+     * Gets a specific metafield by it's $id
+     * @param int $id
+     */
+    public function getMetafield($id)
+    {
+        $resource = $this->shopifyData['resource'];
+        // save the current shopifyData so we don't overwrite it
+        $currentShopifyData = $this->shopifyData;
+        $currentShopifyData['METHOD'] = 'GET';
+        $currentShopifyData['URL'] = self::PREFIX . '/' . $resource . '/' . $id . '/metafields.json';
+        // Checks if the DATA array is set, if it isn't, do not pass it when calling
+        if (isset($this->shopifyData['DATA'])) {
+            $result = $this->call($currentShopifyData, $currentShopifyData['DATA']);
+        } else {
+            $result = $this->call($currentShopifyData);
+        }
+        $this->resetData();
+        return reset($result);
+    }
+
+    /**
+     * Checks if a metafield with the given $namespace and $key exists
+     * @Returns the found metafield object. Defaults to false
+     * @param Array of metafield objects
+     * @param String $namespace
+     * @param String $key
+     */
+    public function metafieldExists($metafields, $namespace, $key)
+    {
+        $retVal = false;
+        foreach ($metafields as $metafield) {
+            if ($metafield->namespace == $namespace && $metafield->key == $key) {
+                $retVal = $metafield;
+            }
+        }
+        return $retVal;
+    }
+
+
+    /**
+     * Creates a metafield for the given $resource with the given $resource_id and $value
+     * @param String $resource
+     * @param int $resource_id
+     * @param String $value
+     */
+    public function createMetafield($resource, $resource_id, $value)
+    {
+        $this->addCallData('resource', 'metafields');
+        $this->addCallData('URL', 'admin/' . $resource . '/' . $resource_id . '/metafields');
+        $this->buildChildData('namespace', 'cottonbabies');
+        $this->buildChildData('key', 'orig_sort_order');
+        $this->buildChildData('value', $value);
+        $this->buildChildData('value_type', 'string');
+        $this->commitChildData();
+        $this->createRecord();
+    }
+
+    /**
+     * Deletes a metafield from the given $resource (e.g. collections) by the $metafield_id
+     * @param String $resource
+     * @param Object $resource_id
+     * @param int $metafield_id
+     */
+    public function deleteMetafield($resource, $resource_id, $metafield_id)
+    {
+        $this->addCallData('resource', 'metafields');
+        $this->addCallData('URL', 'admin/' . $resource . '/' . $resource_id . '/metafields/' . $metafield_id);
+        $this->deleteRecord($metafield_id);
+    }
+
+    /**
+     * Updates the tags of a resource to the given $tags
+     * @param int $resource_id
+     * @param String $resource
+     * @param String $tags
+     */
+    public function updateTags($resource_id, $resource, $tags)
+    {
+        $this->addCallData('resource', $resource);
+        $this->buildChildData('tags', $tags);
+        $this->commitChildData();
+        $this->updateRecord($resource_id);
     }
 } // End of API class
