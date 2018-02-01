@@ -19,5 +19,4 @@ Route::post('/install', 'RocketCode\Shopify\ShopifyController@getInstallUrl');
 Route::get('/success', 'RocketCode\Shopify\ShopifyController@success');
 Route::get('/get', 'RocketCode\Shopify\ShopifyController@get');
 Route::get('/delete', 'RocketCode\Shopify\ShopifyController@delete');
-Route::get('/queue/start', 'RocketCode\Shopify\ShopifyQueueController@start');
 Route::get('webhook/delete/{id}', 'RocketCode\Shopify\ShopifyController@deleteWebhook');
