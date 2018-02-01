@@ -10,6 +10,7 @@ use RocketCode\Shopify\Shop;
 use RocketCode\Shopify\ShopQueueLog;
 use Mail;
 use RocketCode\Shopify\SystemNotice;
+use Carbon\Carbon;
 
 /**
  * The class iterates through all the shops
@@ -21,6 +22,7 @@ class ShopifyQueueController extends ShopifyController
 {
     private $controller = null;
     private $controller_function = null;
+    private $shopQueueLog;
     /**
      * The controller->function are run on each result record from the API.
      * @controller object
@@ -55,21 +57,21 @@ class ShopifyQueueController extends ShopifyController
             $where[] = array('controller', '=', get_class($this->controller));
             $where[] = array('function', '=', $controller_function);
             $where[] = array('processed', '=', 1);
-            $shopQueueLog = ShopQueueLog::where($where)->first();
+            $this->shopQueueLog = ShopQueueLog::where($where)->first();
 
-            $shopQueueLog = $this->validateQueue($shopQueueLog, $shop);
+            $this->shopQueueLog = $this->validateQueue($this->shopQueueLog, $shop);
 
             /**
-             * If $shopQueueLog was found its passed to validateQueue to send out email notices
+             * If $this->shopQueueLog was found its passed to validateQueue to send out email notices
              * and then continues to the next record. If since_id is greater than 0 set current value
              * of since_id found in the shopQueueLog to be able to track the starting record to get from the API.
              */
-            if ($shopQueueLog == 'continue') {
+            if ($this->shopQueueLog == 'continue') {
                 continue;
-            } elseif ($shopQueueLog->since_id > 0) {
-                $since_id = $shopQueueLog->since_id;
-            } elseif ($shopQueueLog->page > 0) {
-                $page = $shopQueueLog->page;
+            } elseif ($this->shopQueueLog->since_id > 0) {
+                $since_id = $this->shopQueueLog->since_id;
+            } elseif ($this->shopQueueLog->page > 0) {
+                $page = $this->shopQueueLog->page;
             }
 
             $force_stop = false; // forces the while to stop when true
@@ -89,14 +91,14 @@ class ShopifyQueueController extends ShopifyController
                 // setting the original callData/Data to this->sh because they may get reset
                 $controller->sh->setShopifyData($shopifyData);
                 // when running after first time
-                if (isset($shopQueueLog->since_id) || isset($shopQueueLog->page)) {
+                if (isset($this->shopQueueLog->since_id) || isset($this->shopQueueLog->page)) {
                     $shop->fresh(); // resets the object after each iteration to ensure its "fresh"
                     // setting counter_type and counter_value
                     if ($collection_resource) {
-                        $page = $shopQueueLog->page;
+                        $page = $this->shopQueueLog->page;
                         $counter_value = $page;
                     } else {
-                        $since_id = $shopQueueLog->since_id;
+                        $since_id = $this->shopQueueLog->since_id;
                         $counter_value = $since_id;
                     }
                     $controller->sh->addData($counter_type, $counter_value);
@@ -121,7 +123,7 @@ class ShopifyQueueController extends ShopifyController
                 }
 
                 foreach ($api_results->$resource as $result) {
-                    $this->controller->$controller_function($resource, $result);
+                    $this->controller->$controller_function($resource, $result, $this);
                     $since_id = $result->id;
 
                     // if not smart or custom_collection e.g. products
@@ -131,12 +133,12 @@ class ShopifyQueueController extends ShopifyController
                             $processed = false;
                             continue;
                         }
-                        $shopQueueLog->since_id = (string) $since_id;
+                        $this->shopQueueLog->since_id = (string) $since_id;
                     }
 
-                    $shopQueueLog->increment('counter', 1);
+                    $this->shopQueueLog->increment('counter', 1);
                     $record_counter++;
-                    $shopQueueLog->save();
+                    $this->shopQueueLog->save();
                     // save the record_counter value to the counter_variable value so it doesn't reset to 0
                     if (!$collection_resource) {
                         $counter_variable = $record_counter;
@@ -145,13 +147,13 @@ class ShopifyQueueController extends ShopifyController
                 if ($collection_resource) {
                     // increment page and save it to the database
                     $page_counter++;
-                    if (isset($shopQueueLog->page)) {
-                        $shopQueueLog->increment('page', 1);
+                    if (isset($this->shopQueueLog->page)) {
+                        $this->shopQueueLog->increment('page', 1);
                     } else {
                         // when running first time, increment by 2 so it starts from page 2 next time
-                        $shopQueueLog->increment('page', $page_counter);
+                        $this->shopQueueLog->increment('page', $page_counter);
                     }
-                    $shopQueueLog->save();
+                    $this->shopQueueLog->save();
                     // save the page_counter value to the counter_variable value so it doesn't reset to 1
                     $counter_variable = $page_counter;
                 }
@@ -160,10 +162,10 @@ class ShopifyQueueController extends ShopifyController
             // If $force_stop is true we mark the queue as processed and save to the database.
             if ($force_stop) {
                 if ($processed) {
-                    $shopQueueLog->processed = 1;
+                    $this->shopQueueLog->processed = 1;
                 }
-                $shopQueueLog->save();
-                $this->validateQueue($shopQueueLog, $shop, true);
+                $this->shopQueueLog->save();
+                $this->validateQueue($this->shopQueueLog, $shop, true);
             }
         }
         Log::info('Shopify Queue Log Stopped: ' . get_class($this->controller) . ' : ' . $controller_function);
@@ -207,6 +209,30 @@ class ShopifyQueueController extends ShopifyController
             }
 
             return $shopQueueLog;
+        }
+    }
+
+    public function updateMessage($message)
+    {
+        $this->shopQueueLog->message = $message;
+        $this->shopQueueLog->save();
+    }
+
+    /**
+     * Checks if the ShopQueueLog entry is expired and deletes it when it expires.
+     * Add this to scheduler for every minute
+     */
+    public function resetQueue()
+    {
+        $shopQueueLogs = ShopQueueLog::all();
+        foreach ($shopQueueLogs as $shopQueueLog) {
+            if ($shopQueueLog->expires_at > 0) {
+                $carbon = Carbon::parse($shopQueueLog->created_at);
+                // if expired, remove the entry from the shop_queue_logs table
+                if ($carbon->diffInMinutes(Carbon::now()) >= $shopQueueLog->expires_at) {
+                    $shopQueueLog->delete();
+                }
+            }
         }
     }
 }
