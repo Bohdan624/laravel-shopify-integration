@@ -63,8 +63,11 @@ class ShopifyQueueController extends ShopifyController
 
             /**
              * If $this->shopQueueLog was found its passed to validateQueue to send out email notices
-             * and then continues to the next record. If since_id is greater than 0 set current value
+             * and then continues to the next record.
+             * If since_id is greater than 0 set current value
              * of since_id found in the shopQueueLog to be able to track the starting record to get from the API.
+             * If page is greater than 0 set current value of page found in the shopQueueLog
+             * to be able to track the starting page to get the resource (e.g. custom/smart_collection) from the API.
              */
             if ($this->shopQueueLog == 'continue') {
                 continue;
@@ -212,6 +215,10 @@ class ShopifyQueueController extends ShopifyController
         }
     }
 
+    /**
+     * Updates the 'message' field on the shop_queue_log entry with useful information while it's running
+     * @param String $message - the message to save
+     */
     public function updateMessage($message)
     {
         $this->shopQueueLog->message = $message;
