@@ -815,7 +815,7 @@ class API
         switch ($resource) {
             case 'smart_collections':
                 // if smart_collections, determine whether to use order.json or #id.json
-                if (array_has($currentShopifyData['DATA'], ['sort_order', 'products'])) {
+                if (array_has($currentShopifyData['DATA'], ['products'])) {
                     $currentShopifyData['URL'] = self::PREFIX . '/' . $resource . '/' . $id . '/order.json';
                 }
                 break;
