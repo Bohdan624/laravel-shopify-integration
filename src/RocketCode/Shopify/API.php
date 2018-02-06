@@ -1128,6 +1128,26 @@ class API
     }
 
     /**
+     * Adds and deletes the given $tags_delete/$tags_add arrays from the product's tags
+     * @param String $tags        - the tags to delete from and add to  e.g. $product->tags
+     * @param Array $tags_delete  - the tags to delete e.g. ['cb_soldout','cb_test']
+     * @param Array $tags_add     - the tags to add e.g. ['cb_new_tag']
+     * @param String $filter_tag  - a tag to filter by e.g. when changing tags for only products with tag 'cb_soldout'
+     */
+    public function changeTags($tags, $tags_delete = array(), $tags_add = array(), $filter_tag = null)
+    {
+        if (!empty($tags)) {
+            if (isset($filter_tag) && $this->sh->hasTag($product->tags, $filter_tag)) {
+                $product_data = [];
+                $updated_tags = $this->sh->manageTag($product->tags, ['cb_soldout'], 'delete');
+                $updated_tags = $this->sh->manageTag($updated_tags, ['cb_auto_soldout'], 'add');
+                return $updated_tags;
+            }
+        }
+    }
+
+
+    /**
      * Checks if the given $tags string contains $tag
      * @param String $tags the tags string e.g. 'cb_feed_facebook, cb_feed_google'
      * @param String $tag the tag to search in the tags
