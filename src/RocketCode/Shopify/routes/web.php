@@ -20,4 +20,5 @@ Route::get('/success', 'RocketCode\Shopify\ShopifyController@success');
 Route::get('/get', 'RocketCode\Shopify\ShopifyController@get');
 Route::get('/delete', 'RocketCode\Shopify\ShopifyController@delete');
 Route::get('webhook/delete/{id}', 'RocketCode\Shopify\ShopifyController@deleteWebhook');
+Route::get('webhook/get', 'RocketCode\Shopify\ShopifyController@getWebhooks');
 Route::get('/queue/reset', 'RocketCode\Shopify\ShopifyQueueController@resetQueue');

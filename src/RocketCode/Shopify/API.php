@@ -410,7 +410,6 @@ class API
         $webhooks = $this->getWebhooks([
             'topic' => $topic,
             'address' => $address,
-            'format' => 'json',
         ]);
 
         // create if it doesn't exist
@@ -510,9 +509,13 @@ class API
         if (!empty($data_properties)) {
             // initialising the DATA array to prevent error
             $callData['DATA'] = [];
-            // adding each property to the DATA array
+            // adding each property to the URL
             foreach ($data_properties as $property => $value) {
-                $callData['DATA'][$property] = $value;
+                if (strpos($callData['URL'], "?") === false) {
+                    $callData['URL'] .= '?' . $property . '=' . $value;
+                } else {
+                    $callData['URL'] .= '&' . $property . '=' . $value;
+                }
             }
         }
         $call = $this->call($callData);
@@ -583,16 +586,40 @@ class API
         }
     }
 
-    public function pagination()
+    /**
+     * Returns the url filters in an array e.g. ['limit' => 250, 'fields' => 'title']
+     */
+    public function getUrlFilters()
     {
-        $resource = $this->shopifyData['DATA']['resource'];
-        $count = $this->getTotalCount($resource);
-        $pages = ceil($count / $this->shopifyData['DATA']['limit']);
+        $filters_index = strpos($this->shopifyData['URL'], '?');
+        $filters_str = substr($this->shopifyData['URL'], $filters_index + 1);
+        $filters = explode("&", $filters_str);
+        foreach ($filters as $filter) {
+            list($k, $v) = explode("=", $filter);
+            $retVal[$k] = $v;
+        }
+        return $retVal;
+    }
+
+    public function pagination($resource)
+    {
+        $continue = true;
         $merged_array = array();
-        for ($page = 1; $page <= $pages; $page++) {
-            $this->addData('page', $page);
-            $resource_array = $this->call($this->shopifyData, $this->shopifyData['DATA']);
+        $page = 1;
+        while ($continue) {
+            $this->addUrlFilter('page', $page);
+            if (isset($this->shopifyData['DATA'])) {
+                $resource_array = $this->call($this->shopifyData, $this->shopifyData['DATA']);
+            } else {
+                $resource_array = $this->call($this->shopifyData);
+            }
+            // break out of the loop
+            if (empty($resource_array->$resource)) {
+                $continue = false;
+                break;
+            }
             $merged_array = array_merge($merged_array, $resource_array->$resource);
+            $page++;
         }
         $this->resetData();
         return $merged_array;
@@ -608,6 +635,20 @@ class API
         $currentShopifyData['URL'] = $this->shopifyData['PLURAL_NAME'] . '/count.json';
         $result = $this->call($currentShopifyData);
         return $result->count;
+    }
+
+    /**
+     * Appends to the end of the url a filter/endpoint e.g. https://test.json?limit=250
+     */
+    public function addUrlFilter($key, $value)
+    {
+        if (isset($this->shopifyData['URL'])) {
+            if (strpos($this->shopifyData['URL'], "?") === false) {
+                $this->shopifyData['URL'] .= '?' . $key . '=' . $value;
+            } else {
+                $this->shopifyData['URL'] .= '&' . $key . '=' . $value;
+            }
+        }
     }
     
     /**
@@ -692,6 +733,10 @@ class API
                 case 'products':
                     $this->shopifyData['PLURAL_NAME'] = $resource;
                     $this->shopifyData['SINGULAR_NAME'] = 'product';
+                    break;
+                case 'variants':
+                    $this->shopifyData['PLURAL_NAME'] = $resource;
+                    $this->shopifyData['SINGULAR_NAME'] = 'variant';
                     break;
                 case 'custom_collections':
                     $this->shopifyData['PLURAL_NAME'] = 'custom_collections';
@@ -815,15 +860,20 @@ class API
         switch ($resource) {
             case 'smart_collections':
                 // if smart_collections, determine whether to use order.json or #id.json
-                if (array_has($currentShopifyData['DATA'], ['products'])) {
-                    $currentShopifyData['URL'] = self::PREFIX . '/' . $resource . '/' . $id . '/order.json';
+                if (isset($currentShopifyData['DATA']) && array_has($currentShopifyData['DATA'], 'products')) {
+                    $currentShopifyData['URL'] = str_replace(".json", '/' . $id . '/order.json', $currentShopifyData['URL']);
                 }
                 break;
             default:
                 $currentShopifyData['URL'] = self::PREFIX . '/' . $resource . '/' . $id . '.json';
         }
 
-        $result = $this->call($currentShopifyData, $currentShopifyData['DATA']);
+
+        if (isset($currentShopifyData['DATA'])) {
+            $result = $this->call($currentShopifyData, $currentShopifyData['DATA']);
+        } else {
+            $result = $this->call($currentShopifyData);
+        }
         $this->resetData();
         return $result;
     }
@@ -840,7 +890,7 @@ class API
         return $result;
     }
 
-    public function deleteRecord($id)
+    public function deleteRecord($id, $parent_id = false)
     {
         // Check if the record exists
         $resource = $this->shopifyData['resource'];
@@ -851,6 +901,7 @@ class API
         $currentShopifyData['METHOD'] = 'GET';
         switch ($this->shopifyData['resource']) {
             case 'collects':
+            case 'variants':
                 $compare_property_name = 'id';
                 $currentShopifyData['URL'] = 'admin/' . $resource . '/' . $id . '.json';
                 break;
@@ -867,7 +918,13 @@ class API
         // delete the record if it exists
         if ((isset($result->$resource) && count($result->$resource) == 1) || $result->$resource_singular) {
             $this->shopifyData['METHOD'] = 'DELETE';
-            $this->shopifyData['URL'] = 'admin/' . $resource . '/' . $id . '.json';
+            switch ($this->shopifyData['resource']) {
+                case 'variants':
+                    $this->shopifyData['URL'] = 'admin/products/' . $parent_id . '/variants/' . $id . '.json';
+                    break;
+                default:
+                    $this->shopifyData['URL'] = 'admin/' . $resource . '/' . $id . '.json';
+            }
 
             $result = $this->call($this->shopifyData);
 
@@ -893,7 +950,7 @@ class API
         // if verification passed
         if ($verify) {
             // replaces "/" with "_" to create valid topic directories
-            $topic_dir = str_replace('/', '_', $request->header('x-shopify-topic'));
+            $topic_dir = $request->header('x-shopify-topic');
             $storage_dir = $this->webhooks_dir . $request->header('x-shopify-shop-domain') . '/' . $topic_dir;
             $dir = Storage::directories($storage_dir);
             if (empty($dir)) {
@@ -952,7 +1009,10 @@ class API
      */
     public function readWebhooks($topic)
     {
-        return Storage::allFiles($this->webhooks_dir . $this->_API['SHOP_DOMAIN'] . '/' . $topic);
+        $all_webhooks = Storage::allFiles($this->webhooks_dir . $this->_API['SHOP_DOMAIN'] . '/' . $topic);
+        $processed_webhooks = Storage::allFiles($this->webhooks_dir . $this->_API['SHOP_DOMAIN'] . '/' . $topic . '/processed');
+        // return the webhooks that aren't processed yet
+        return array_diff($all_webhooks, $processed_webhooks);
     }
 
     /**
@@ -969,15 +1029,15 @@ class API
         if (empty($processed_dirs)) {
             Storage::makeDirectory($processed_dir);
         }
-        // updating the modified date
-        touch(storage_path() . '/app/' . $webhooks_dir . '/' . $file);
         // get the file name from the path
         $file_name = explode('/', $file);
         // get the last element which is the file name
         $file_name = end($file_name);
+        // updating the modified date
+        touch(storage_path() . '/app/' . $webhooks_dir . '/' . $file_name);
 
         // move the log file to processed directory
-        $src_file = $webhooks_dir . '/' . $file;
+        $src_file = $webhooks_dir . '/' . $file_name;
         $dest_file = $processed_dir . '/' . $file_name;
         Storage::move($src_file, $dest_file);
     }
@@ -1102,12 +1162,18 @@ class API
      * @param String $namespace
      * @param String $key
      */
-    public function metafieldExists($metafields, $namespace, $key)
+    public function metafieldExists($metafields, $namespace, $key, $partial = false)
     {
         $retVal = false;
         foreach ($metafields as $metafield) {
-            if ($metafield->namespace == $namespace && $metafield->key == $key) {
-                $retVal = $metafield;
+            if ($partial) {
+                if (strpos($metafield->namespace, $namespace) !== false && strpos($metafield->key, $key) !== false) {
+                    $retVal = $metafield;
+                }
+            } else {
+                if ($metafield->namespace == $namespace && $metafield->key == $key) {
+                    $retVal = $metafield;
+                }
             }
         }
         return $retVal;
@@ -1120,13 +1186,16 @@ class API
      * @param int $resource_id
      * @param String $value
      */
-    public function createMetafield($resource, $resource_id, $value)
+    public function createMetafield($resource, $resource_id, $metafield_data)
     {
         $this->addCallData('resource', 'metafields');
         $this->addCallData('URL', 'admin/' . $resource . '/' . $resource_id . '/metafields');
-        $this->buildChildData('namespace', 'cottonbabies');
-        $this->buildChildData('key', 'orig_sort_order');
-        $this->buildChildData('value', $value);
+        // $this->buildChildData('namespace', 'cottonbabies');
+        $this->buildChildData('namespace', $metafield_data['namespace']);
+        // $this->buildChildData('key', 'orig_sort_order');
+        $this->buildChildData('key', $metafield_data['key']);
+        // $this->buildChildData('value', $value);
+        $this->buildChildData('value', $metafield_data['value']);
         $this->buildChildData('value_type', 'string');
         $this->commitChildData();
         $this->createRecord();

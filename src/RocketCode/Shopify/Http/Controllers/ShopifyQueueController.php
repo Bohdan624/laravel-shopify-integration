@@ -22,19 +22,22 @@ class ShopifyQueueController extends ShopifyController
 {
     private $controller = null;
     private $controller_function = null;
+    private $resource = null;
     private $shopQueueLog;
+    private $finished = true;
     /**
      * The controller->function are run on each result record from the API.
      * @controller object
      * @controller_function string
      */
-    public function start($controller, $controller_function, $max_records)
+    public function start($controller, $controller_function, $max_records, $myshopify_domain)
     {
         $this->controller = $controller;
         $this->controller_function = $controller_function;
 
         $shopifyData = $controller->sh->getShopifyData();
         $resource = $shopifyData['resource'];
+        $this->resource = $resource;
 
         // check if the resource is a smart/custom collection
         $collection_resource = (strpos($resource, 'collection') !== false);
@@ -44,6 +47,10 @@ class ShopifyQueueController extends ShopifyController
         $shops = Shop::all();
 
         foreach ($shops as $shop) {
+            // If $myshopify_domain is not null and isn't the set domain, then continue
+            if ($myshopify_domain !== null && $myshopify_domain != $shop->myshopify_domain) {
+                continue;
+            }
             $controller->shopSwitch($shop->myshopify_domain);
             echo $shop->myshopify_domain . '<br>';
 
@@ -54,6 +61,7 @@ class ShopifyQueueController extends ShopifyController
              */
             $where = array();
             $where[] = array('shop_id', '=', $shop->id);
+            $where[] = array('resource', '=', $resource);
             $where[] = array('controller', '=', get_class($this->controller));
             $where[] = array('function', '=', $controller_function);
             $where[] = array('processed', '=', 1);
@@ -77,6 +85,7 @@ class ShopifyQueueController extends ShopifyController
                 $page = $this->shopQueueLog->page;
             }
 
+            $this->finished = false; // not finished
             $force_stop = false; // forces the while to stop when true
             $page_counter = 1;
             $record_counter = 0;
@@ -104,16 +113,16 @@ class ShopifyQueueController extends ShopifyController
                         $since_id = $this->shopQueueLog->since_id;
                         $counter_value = $since_id;
                     }
-                    $controller->sh->addData($counter_type, $counter_value);
+                    $controller->sh->addUrlFilter($counter_type, $counter_value);
                 }
                 // if running first time - when there's no record in database
                 else {
                     // if smart or custom_collection
                     if ($collection_resource) {
                         // start at the first page
-                        $controller->sh->addData($counter_type, $page_counter);
+                        $controller->sh->addUrlFilter($counter_type, $page_counter);
                     } else {
-                        $controller->sh->addData($counter_type, 0);
+                        $controller->sh->addUrlFilter($counter_type, 0);
                     }
                 }
 
@@ -172,6 +181,7 @@ class ShopifyQueueController extends ShopifyController
             }
         }
         Log::info('Shopify Queue Log Stopped: ' . get_class($this->controller) . ' : ' . $controller_function);
+        return $this->finished;
     }
 
     public function validateQueue($shopQueueLog, $shop, $done = false)
@@ -187,7 +197,7 @@ class ShopifyQueueController extends ShopifyController
             
             if ($done == true) {
                 $message->done = true;
-                Mail::to($mailto)->send(new SystemNotice($message));
+                // Mail::to($mailto)->send(new SystemNotice($message));
             }
             return 'continue';
         } else {
@@ -195,8 +205,10 @@ class ShopifyQueueController extends ShopifyController
 
             $shopQueueLogData = array(
                 'shop_id' => $shop->id,
+                'resource' => $this->resource,
                 'controller' => get_class($this->controller),
-                'function' => $this->controller_function
+                'function' => $this->controller_function,
+                'expires_at' => 1440
             );
 
             $shopQueueLog = ShopQueueLog::updateOrCreate($shopQueueLogData);
@@ -208,7 +220,7 @@ class ShopifyQueueController extends ShopifyController
             $message->shop = $shop;
 
             if ($shopQueueLog->wasRecentlyCreated) {
-                Mail::to($mailto)->send(new SystemNotice($message));
+                // Mail::to($mailto)->send(new SystemNotice($message));
             }
 
             return $shopQueueLog;
