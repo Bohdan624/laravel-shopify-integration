@@ -1254,4 +1254,28 @@ class API
         $this->commitChildData();
         $this->updateRecord($resource_id);
     }
+
+    /**
+     * Creates or updates a given log file with given $separator
+     * @param String $log_name
+     * @param String $log_dir
+     * @param Array $content
+     * @param String $separator
+     */
+    public function createOrUpdateLog($log_name, $log_dir, $content, $separator = false)
+    {
+        if ($separator) {
+            $content .= $separator;
+        }
+        $full_path = $log_dir . '/' . $log_name;
+        $log_dirs = Storage::directories($log_dir);
+        if (empty($log_dirs)) {
+            Storage::makeDirectory($log_dir);
+        }
+        if (!Storage::exists($full_path)) {
+            Storage::put($full_path, $content);
+        } else {
+            Storage::append($full_path, $content);
+        }
+    }
 } // End of API class
