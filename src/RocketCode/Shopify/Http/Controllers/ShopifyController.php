@@ -121,4 +121,12 @@ class ShopifyController extends Controller
             $this->sh->setupWebhooks($formatted_webhooks);
         }
     }
+
+    /**
+     * Returns a list of active webhooks for all the shops
+     */
+    public function getWebhooks()
+    {
+        return $this->sh->getWebhooks();
+    }
 }
