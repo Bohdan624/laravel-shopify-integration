@@ -511,9 +511,11 @@ class API
             $callData['DATA'] = [];
             // adding each property to the URL
             foreach ($data_properties as $property => $value) {
+                // if first property, add ?    e.g. https://domain.com?first_property=test
                 if (strpos($callData['URL'], "?") === false) {
                     $callData['URL'] .= '?' . $property . '=' . $value;
                 } else {
+                    // if not first property add &    e.g. https://domain.com?first_property=test&second_property=test2
                     $callData['URL'] .= '&' . $property . '=' . $value;
                 }
             }
@@ -890,6 +892,11 @@ class API
         return $result;
     }
 
+    /**
+     * Deletes a record
+     * @param int $id - the id of the given resource
+     * @param int $parent_id - the id of the parent resource e.g. when deleting a variant, we need to pass in the product_id as well which is the parent_id
+     */
     public function deleteRecord($id, $parent_id = false)
     {
         // Check if the record exists

@@ -197,7 +197,7 @@ class ShopifyQueueController extends ShopifyController
             
             if ($done == true) {
                 $message->done = true;
-                // Mail::to($mailto)->send(new SystemNotice($message));
+                Mail::to($mailto)->send(new SystemNotice($message));
             }
             return 'continue';
         } else {
@@ -220,7 +220,7 @@ class ShopifyQueueController extends ShopifyController
             $message->shop = $shop;
 
             if ($shopQueueLog->wasRecentlyCreated) {
-                // Mail::to($mailto)->send(new SystemNotice($message));
+                Mail::to($mailto)->send(new SystemNotice($message));
             }
 
             return $shopQueueLog;
