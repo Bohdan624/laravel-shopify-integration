@@ -30,7 +30,7 @@ class ShopifyQueueController extends ShopifyController
      * @controller object
      * @controller_function string
      */
-    public function start($controller, $controller_function, $max_records, $myshopify_domain)
+    public function start($controller, $controller_function, $max_records, $myshopify_domain = null)
     {
         $this->controller = $controller;
         $this->controller_function = $controller_function;
@@ -88,7 +88,7 @@ class ShopifyQueueController extends ShopifyController
             $this->finished = false; // not finished
             $force_stop = false; // forces the while to stop when true
             $page_counter = 1;
-            $record_counter = 0;
+            $record_counter = 1;
 
             // if resource is any collection we count by page
             if ($collection_resource) {
@@ -143,7 +143,6 @@ class ShopifyQueueController extends ShopifyController
                         if ($record_counter >= $max_records) {
                             $force_stop = true;
                             $processed = false;
-                            continue;
                         }
                         $this->shopQueueLog->since_id = (string) $since_id;
                     }
@@ -154,6 +153,10 @@ class ShopifyQueueController extends ShopifyController
                     // save the record_counter value to the counter_variable value so it doesn't reset to 0
                     if (!$collection_resource) {
                         $counter_variable = $record_counter;
+                    }
+                    // break if force_stop
+                    if ($force_stop) {
+                        break;
                     }
                 } // foreach end
                 if ($collection_resource) {

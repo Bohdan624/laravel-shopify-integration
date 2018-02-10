@@ -944,6 +944,38 @@ class API
     }
 
     /**
+     * Creates a resource with the given $resource_data
+     * @param String $resource
+     * @param Array $resource_data - e.g. ['title' => 'TITLE', 'rules' => ['column' => 'vendor', 'relation' => 'equals', 'condition' => 'Cottonbabies']]
+     */
+    public function createResource($resource, $resource_data)
+    {
+        $this->addCallData('resource', $resource);
+        $this->addCallData('URL', 'admin/' . $resource);
+        foreach ($resource_data as $property => $data) {
+            $this->buildChildData($property, $data);
+        }
+        $this->commitChildData();
+        return $this->createRecord();
+    }
+
+    /**
+     * Updates a resource with the given $resource_data['id']
+     * @param String $resource
+     * @param Array $resource_data - e.g. ['title' => 'TITLE', 'body_html' => 'htmlstuff']
+     */
+    public function updateResource($resource, $resource_id, $resource_data)
+    {
+        $this->addCallData('resource', $resource);
+        $this->addCallData('URL', 'admin/' . $resource);
+        foreach ($resource_data as $property => $data) {
+            $this->buildChildData($property, $data);
+        }
+        $this->commitChildData();
+        return $this->updateRecord($resource_id);
+    }
+
+    /**
      * Verifies request and Saves the webhooks in designated directory e.g. shopify_webhooks/domain/topic
      * @param object $request - the Request object
      */
@@ -1137,10 +1169,10 @@ class API
     public function changeTags($tags, $tags_delete = array(), $tags_add = array(), $filter_tag = null)
     {
         if (!empty($tags)) {
-            if (isset($filter_tag) && $this->sh->hasTag($product->tags, $filter_tag)) {
+            if (isset($filter_tag) && $this->hasTag($product->tags, $filter_tag)) {
                 $product_data = [];
-                $updated_tags = $this->sh->manageTag($product->tags, ['cb_soldout'], 'delete');
-                $updated_tags = $this->sh->manageTag($updated_tags, ['cb_auto_soldout'], 'add');
+                $updated_tags = $this->manageTag($product->tags, ['cb_soldout'], 'delete');
+                $updated_tags = $this->manageTag($updated_tags, ['cb_auto_soldout'], 'add');
                 return $updated_tags;
             }
         }
@@ -1253,5 +1285,29 @@ class API
         $this->buildChildData('tags', $tags);
         $this->commitChildData();
         $this->updateRecord($resource_id);
+    }
+
+    /**
+     * Iterates through all the shops and runs the given functions from the given controller
+     * @parameter Object $controller - the controller object
+     * @parameter String/Array $function_name - an array of function names or just a function name
+     */
+    public function iterateShops($controller, $function_name)
+    {
+        $shops = Shop::all();
+        // foreach of shops
+        foreach ($shops as $shop) {
+            $this->shopSwitch($shop->myshopify_domain, true);
+            // if $function_name is an Array
+            if (is_array($function_name)) {
+                foreach ($function_name as $function) {
+                    $controller->$function();
+                }
+            }
+            // if $function_name is a String
+            else {
+                $controller->$function_name();
+            }
+        }
     }
 } // End of API class
