@@ -344,14 +344,19 @@ class API
         }
 
 
+        $message = [
+            'number' => curl_errno($ch),
+            'message' => curl_error($ch),
+            'data' => print_r($request, true),
+        ];
         // cURL Errors
-        $_ERROR = array('NUMBER' => curl_errno($ch), 'MESSAGE' => curl_error($ch));
+        $_ERROR = array('NUMBER' => curl_errno($ch), 'MESSAGE' => $message);
 
         curl_close($ch);
 
         if ($_ERROR['NUMBER']) {
             // throw new \Exception('ERROR #' . $_ERROR['NUMBER'] . ': ' . $_ERROR['MESSAGE']);
-            $this->exceptionNotice('Error Number: ' . $_ERROR['NUMBER'] . ': ' . $_ERROR['MESSAGE']);
+            $this->exceptionNotice($_ERROR['MESSAGE']);
         }
 
 
@@ -760,6 +765,10 @@ class API
                     $this->shopifyData['PLURAL_NAME'] = 'metafields';
                     $this->shopifyData['SINGULAR_NAME'] = 'metafield';
                     break;
+                case 'customers':
+                    $this->shopifyData['PLURAL_NAME'] = 'customers';
+                    $this->shopifyData['SINGULAR_NAME'] = 'customer';
+                    break;
             }
     }
     
@@ -975,6 +984,48 @@ class API
         return $this->updateRecord($resource_id);
     }
 
+    public function getResource($resource, $url_filters, $function, $single = false)
+    {
+        $retVal = false;
+        $this->addCallData('resource', $resource);
+        $this->addCallData('URL', 'admin/' . $resource);
+        foreach ($url_filters as $filter => $value) {
+            $this->addUrlFilter($filter, $value);
+        }
+        switch ($function) {
+            case 'paginate':
+                $result = $this->pagination($resource);
+                break;
+            case 'list':
+                $result = $this->listShopifyResources();
+                break;
+            case 'get':
+                $result = $this->getRecord($single);
+                break;
+        }
+        // if returning a single result
+        if ($single) {
+            switch ($function) {
+                case 'list':
+                    // resetting twice as it's in a 2 layer nesting. e.g. $result = ["PRODUCT" => [ 0 => Object{..} ], "ERRORS" => {..}]
+                    $result = reset($result);
+                    $result = reset($result);
+                    if ($result) {
+                        $retVal = $result;
+                    }
+                    break;
+                case 'get':
+                    $retVal = reset($result);
+                    break;
+                default:
+                    $retVal = reset($result);
+            }
+        } else {
+            $retVal = $result;
+        }
+        return $retVal;
+    }
+
     /**
      * Verifies request and Saves the webhooks in designated directory e.g. shopify_webhooks/domain/topic
      * @param object $request - the Request object
@@ -1178,6 +1229,17 @@ class API
         }
     }
 
+    public function getResourceWithTag($resource, $tag)
+    {
+        $retVal = [];
+        $records = $this->getResource($resource, ['fields' => 'tags'], 'paginate');
+        foreach ($records as $key => $record) {
+            if (stripos($record->tags, $tag)) {
+                $retVal[] = $record;
+            }
+        }
+        return $retVal;
+    }
 
     /**
      * Checks if the given $tags string contains $tag
@@ -1187,7 +1249,7 @@ class API
     public function hasTag($tags, $tag)
     {
         $retVal = false;
-        if (strpos($tags, $tag) !== false) {
+        if (stripos($tags, $tag) !== false) {
             $retVal = true;
         }
         return $retVal;
@@ -1226,7 +1288,7 @@ class API
         $retVal = false;
         foreach ($metafields as $metafield) {
             if ($partial) {
-                if (strpos($metafield->namespace, $namespace) !== false && strpos($metafield->key, $key) !== false) {
+                if (stripos($metafield->namespace, $namespace) !== false && stripos($metafield->key, $key) !== false) {
                     $retVal = $metafield;
                 }
             } else {
