@@ -984,6 +984,13 @@ class API
         return $this->updateRecord($resource_id);
     }
 
+    /**
+     * Gets resource from the given $resource and applies the given $url_filters to the call. The type of call is determined by $function
+     * @param String $resource
+     * @param Array $url_filters  - e.g. ['limit' => 250]
+     * @param String $function - .e.g 'paginate'
+     * @param boolean/int $single - can be int when using 'get' $function e.g. getResource('products', [], 'get', 234987);
+     */
     public function getResource($resource, $url_filters, $function, $single = false)
     {
         $retVal = false;
@@ -1229,6 +1236,11 @@ class API
         }
     }
 
+    /**
+     * Gets all the $resource with the given $tag
+     * @param String $resource
+     * @param String $tag
+     */
     public function getResourceWithTag($resource, $tag)
     {
         $retVal = [];
