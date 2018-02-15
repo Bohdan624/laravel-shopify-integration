@@ -8,7 +8,6 @@
 use Illuminate\Http\File;
 use Storage;
 use Carbon\Carbon;
-use Log;
 use Illuminate\Http\Request;
 use Mail;
 use RocketCode\Shopify\ShopifyWebhookNotice;
@@ -268,6 +267,10 @@ class API
             'ALLDATA'       => true
         );
             
+        // unset the DATA array from $userData if the METHOD is get
+        if (isset($userData['DATA']) && $userData['METHOD'] == 'GET') {
+            unset($userData['DATA']);
+        }
 
         if ($verifyData) {
             $request = $this->setupUserData(array_merge($defaults, $userData));
@@ -864,11 +867,36 @@ class API
     **/
     public function updateRecord($id)
     {
+        // Check if the record exists
         $resource = $this->shopifyData['resource'];
-        $currentShopifyData = $this->shopifyData;
-        $currentShopifyData['METHOD'] = 'PUT';
+        $resource_singular = $this->shopifyData['SINGULAR_NAME'];
+        $compare_property_value = $id;
 
-        switch ($resource) {
+        $tempShopifyData = $this->shopifyData;
+        $tempShopifyData['METHOD'] = 'GET';
+        switch ($this->shopifyData['resource']) {
+            case 'collects':
+            case 'variants':
+                $compare_property_name = 'id';
+                $tempShopifyData['URL'] = 'admin/' . $resource . '/' . $id . '.json';
+                break;
+            case 'metafields':
+                // metafields requires a resource id and metafield id, therefore, we're setting the URL from where it's being called
+                $tempShopifyData['URL'] = $tempShopifyData['URL'];
+                break;
+            default:
+                $compare_property_name = 'ids';
+                $tempShopifyData['URL'] .= '?' . $compare_property_name . '=' . urlencode($compare_property_value);
+        }
+        
+        $result = $this->call($tempShopifyData);
+        if ((isset($result->$resource) && count($result->$resource) == 1) || $result->$resource_singular) {
+            // update the record
+            $resource = $this->shopifyData['resource'];
+            $currentShopifyData = $this->shopifyData;
+            $currentShopifyData['METHOD'] = 'PUT';
+
+            switch ($resource) {
             case 'smart_collections':
                 // if smart_collections, determine whether to use order.json or #id.json
                 if (isset($currentShopifyData['DATA']) && array_has($currentShopifyData['DATA'], 'products')) {
@@ -880,13 +908,14 @@ class API
         }
 
 
-        if (isset($currentShopifyData['DATA'])) {
-            $result = $this->call($currentShopifyData, $currentShopifyData['DATA']);
-        } else {
-            $result = $this->call($currentShopifyData);
+            if (isset($currentShopifyData['DATA'])) {
+                $result = $this->call($currentShopifyData, $currentShopifyData['DATA']);
+            } else {
+                $result = $this->call($currentShopifyData);
+            }
+            $this->resetData();
+            return $result;
         }
-        $this->resetData();
-        return $result;
     }
 
     /**
@@ -977,6 +1006,7 @@ class API
     {
         $this->addCallData('resource', $resource);
         $this->addCallData('URL', 'admin/' . $resource);
+        $this->addCallData('METHOD', 'PUT');
         foreach ($resource_data as $property => $data) {
             $this->buildChildData($property, $data);
         }
@@ -1356,6 +1386,7 @@ class API
     public function updateTags($resource_id, $resource, $tags)
     {
         $this->addCallData('resource', $resource);
+        $this->addCallData('URL', 'admin/' . $resource);
         $this->buildChildData('tags', $tags);
         $this->commitChildData();
         $this->updateRecord($resource_id);
@@ -1383,5 +1414,13 @@ class API
                 $controller->$function_name();
             }
         }
+    }
+
+    /**
+     * Returns the current store domain
+     */
+    public function getShopDomain()
+    {
+        return $this->_API['SHOP_DOMAIN'];
     }
 } // End of API class
