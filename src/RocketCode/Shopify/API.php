@@ -772,6 +772,10 @@ class API
                     $this->shopifyData['PLURAL_NAME'] = 'customers';
                     $this->shopifyData['SINGULAR_NAME'] = 'customer';
                     break;
+                case 'orders':
+                    $this->shopifyData['PLURAL_NAME'] = 'orders';
+                    $this->shopifyData['SINGULAR_NAME'] = 'order';
+                    break;
             }
     }
     
@@ -842,14 +846,19 @@ class API
     /**
      * Gets a record with the given $id e.g. products/$id.json
      * @param int $id
+     * @param String $child_resource - e.g. when getting a product's variants
      */
-    public function getRecord($id)
+    public function getRecord($id, $child_resource = false)
     {
         $resource = $this->shopifyData['resource'];
         // save the current shopifyData so we don't overwrite it
         $currentShopifyData = $this->shopifyData;
         $currentShopifyData['METHOD'] = 'GET';
-        $currentShopifyData['URL'] = self::PREFIX . '/' . $resource . '/' . $id . '.json';
+        if ($child_resource) {
+            $currentShopifyData['URL'] = self::PREFIX . '/' . $resource . '/' . $id . '/' . $child_resource . '.json';
+        } else {
+            $currentShopifyData['URL'] = self::PREFIX . '/' . $resource . '/' . $id . '.json';
+        }
         // Checks if the DATA array is set, if it isn't, do not pass it when calling
         if (isset($this->shopifyData['DATA'])) {
             $result = $this->call($currentShopifyData, $currentShopifyData['DATA']);
@@ -1020,8 +1029,9 @@ class API
      * @param Array $url_filters  - e.g. ['limit' => 250]
      * @param String $function - .e.g 'paginate'
      * @param boolean/int $single - can be int when using 'get' $function e.g. getResource('products', [], 'get', 234987);
+     * @param String $child_resource - can be a string when using 'get' $function - e.g. getResource('products', [], 'get', 234234, 'variants')
      */
-    public function getResource($resource, $url_filters, $function, $single = false)
+    public function getResource($resource, $url_filters, $function, $single = false, $child_resource = false)
     {
         $retVal = false;
         $this->addCallData('resource', $resource);
@@ -1037,7 +1047,11 @@ class API
                 $result = $this->listShopifyResources();
                 break;
             case 'get':
-                $result = $this->getRecord($single);
+                if ($child_resource) {
+                    $result = $this->getRecord($single, $child_resource);
+                } else {
+                    $result = $this->getRecord($single);
+                }
                 break;
         }
         // if returning a single result
