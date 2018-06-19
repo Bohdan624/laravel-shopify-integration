@@ -8,7 +8,6 @@
 use Illuminate\Http\File;
 use Storage;
 use Carbon\Carbon;
-use Log;
 use Illuminate\Http\Request;
 use Mail;
 use RocketCode\Shopify\ShopifyWebhookNotice;
@@ -268,6 +267,10 @@ class API
             'ALLDATA'       => true
         );
             
+        // unset the DATA array from $userData if the METHOD is get
+        if (isset($userData['DATA']) && $userData['METHOD'] == 'GET') {
+            unset($userData['DATA']);
+        }
 
         if ($verifyData) {
             $request = $this->setupUserData(array_merge($defaults, $userData));
@@ -769,6 +772,10 @@ class API
                     $this->shopifyData['PLURAL_NAME'] = 'customers';
                     $this->shopifyData['SINGULAR_NAME'] = 'customer';
                     break;
+                case 'orders':
+                    $this->shopifyData['PLURAL_NAME'] = 'orders';
+                    $this->shopifyData['SINGULAR_NAME'] = 'order';
+                    break;
             }
     }
     
@@ -839,14 +846,19 @@ class API
     /**
      * Gets a record with the given $id e.g. products/$id.json
      * @param int $id
+     * @param String $child_resource - e.g. when getting a product's variants
      */
-    public function getRecord($id)
+    public function getRecord($id, $child_resource = false)
     {
         $resource = $this->shopifyData['resource'];
         // save the current shopifyData so we don't overwrite it
         $currentShopifyData = $this->shopifyData;
         $currentShopifyData['METHOD'] = 'GET';
-        $currentShopifyData['URL'] = self::PREFIX . '/' . $resource . '/' . $id . '.json';
+        if ($child_resource) {
+            $currentShopifyData['URL'] = self::PREFIX . '/' . $resource . '/' . $id . '/' . $child_resource . '.json';
+        } else {
+            $currentShopifyData['URL'] = self::PREFIX . '/' . $resource . '/' . $id . '.json';
+        }
         // Checks if the DATA array is set, if it isn't, do not pass it when calling
         if (isset($this->shopifyData['DATA'])) {
             $result = $this->call($currentShopifyData, $currentShopifyData['DATA']);
@@ -864,11 +876,36 @@ class API
     **/
     public function updateRecord($id)
     {
+        // Check if the record exists
         $resource = $this->shopifyData['resource'];
-        $currentShopifyData = $this->shopifyData;
-        $currentShopifyData['METHOD'] = 'PUT';
+        $resource_singular = $this->shopifyData['SINGULAR_NAME'];
+        $compare_property_value = $id;
 
-        switch ($resource) {
+        $tempShopifyData = $this->shopifyData;
+        $tempShopifyData['METHOD'] = 'GET';
+        switch ($this->shopifyData['resource']) {
+            case 'collects':
+            case 'variants':
+                $compare_property_name = 'id';
+                $tempShopifyData['URL'] = 'admin/' . $resource . '/' . $id . '.json';
+                break;
+            case 'metafields':
+                // metafields requires a resource id and metafield id, therefore, we're setting the URL from where it's being called
+                $tempShopifyData['URL'] = $tempShopifyData['URL'];
+                break;
+            default:
+                $compare_property_name = 'ids';
+                $tempShopifyData['URL'] .= '?' . $compare_property_name . '=' . urlencode($compare_property_value);
+        }
+        
+        $result = $this->call($tempShopifyData);
+        if ((isset($result->$resource) && count($result->$resource) == 1) || $result->$resource_singular) {
+            // update the record
+            $resource = $this->shopifyData['resource'];
+            $currentShopifyData = $this->shopifyData;
+            $currentShopifyData['METHOD'] = 'PUT';
+
+            switch ($resource) {
             case 'smart_collections':
                 // if smart_collections, determine whether to use order.json or #id.json
                 if (isset($currentShopifyData['DATA']) && array_has($currentShopifyData['DATA'], 'products')) {
@@ -880,13 +917,14 @@ class API
         }
 
 
-        if (isset($currentShopifyData['DATA'])) {
-            $result = $this->call($currentShopifyData, $currentShopifyData['DATA']);
-        } else {
-            $result = $this->call($currentShopifyData);
+            if (isset($currentShopifyData['DATA'])) {
+                $result = $this->call($currentShopifyData, $currentShopifyData['DATA']);
+            } else {
+                $result = $this->call($currentShopifyData);
+            }
+            $this->resetData();
+            return $result;
         }
-        $this->resetData();
-        return $result;
     }
 
     /**
@@ -977,6 +1015,7 @@ class API
     {
         $this->addCallData('resource', $resource);
         $this->addCallData('URL', 'admin/' . $resource);
+        $this->addCallData('METHOD', 'PUT');
         foreach ($resource_data as $property => $data) {
             $this->buildChildData($property, $data);
         }
@@ -990,8 +1029,9 @@ class API
      * @param Array $url_filters  - e.g. ['limit' => 250]
      * @param String $function - .e.g 'paginate'
      * @param boolean/int $single - can be int when using 'get' $function e.g. getResource('products', [], 'get', 234987);
+     * @param String $child_resource - can be a string when using 'get' $function - e.g. getResource('products', [], 'get', 234234, 'variants')
      */
-    public function getResource($resource, $url_filters, $function, $single = false)
+    public function getResource($resource, $url_filters, $function, $single = false, $child_resource = false)
     {
         $retVal = false;
         $this->addCallData('resource', $resource);
@@ -1007,7 +1047,11 @@ class API
                 $result = $this->listShopifyResources();
                 break;
             case 'get':
-                $result = $this->getRecord($single);
+                if ($child_resource) {
+                    $result = $this->getRecord($single, $child_resource);
+                } else {
+                    $result = $this->getRecord($single);
+                }
                 break;
         }
         // if returning a single result
@@ -1356,6 +1400,7 @@ class API
     public function updateTags($resource_id, $resource, $tags)
     {
         $this->addCallData('resource', $resource);
+        $this->addCallData('URL', 'admin/' . $resource);
         $this->buildChildData('tags', $tags);
         $this->commitChildData();
         $this->updateRecord($resource_id);
@@ -1383,5 +1428,13 @@ class API
                 $controller->$function_name();
             }
         }
+    }
+
+    /**
+     * Returns the current store domain
+     */
+    public function getShopDomain()
+    {
+        return $this->_API['SHOP_DOMAIN'];
     }
 } // End of API class
