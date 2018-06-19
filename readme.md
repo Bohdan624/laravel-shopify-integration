@@ -4,20 +4,7 @@ Laravel / Shopify API Wrapper
 An easy-to-use PHP package to communicate with [Shopify's API](http://docs.shopify.com/api) in Laravel.
 
 ## Installation
-#### Require rocket-code/shopify in `composer.json`
-
-Add this Git repository (`"https://github.com/giact/laravel-shopify-API-wrapper"`) in your "repositories" object (create it if neccesary).
-
-Example:
-
-```
-	"repositories": [
-		{
-			"type": "git",
-			"url": "https://github.com/giact/laravel-shopify-API-wrapper"
-		}
-	]
-```
+#### Require rocket-code/shopify-cottonbabies in `composer.json`
 
 Add `"rocket-code/shopify-cottonbabies": "~1.0"` in your "require" object.  
 
