@@ -4,6 +4,7 @@ Laravel / Shopify API Wrapper
 An easy-to-use PHP package to communicate with [Shopify's API](http://docs.shopify.com/api) in Laravel.
 
 ## Installation
+#### Make sure to download the .env file from the server before starting
 #### Require rocket-code/shopify-cottonbabies in `composer.json`
 
 Add `"rocket-code/shopify-cottonbabies": "~1.0"` in your "require" object.  
@@ -111,42 +112,6 @@ Pass the setup array as the second argument in `App::make()`:
 $sh = App::make('ShopifyAPI', ['API_KEY' => '', 'API_SECRET' => '', 'SHOP_DOMAIN' => '', 'ACCESS_TOKEN' => '']);
 ``` 
 
-
-## Finding the Install URL
-After setting up with at least `SHOP_DOMAIN` & `API_KEY`, call `installURL()` with an array of permissions ([the app's Scope](docs.shopify.com/api/authentication/oauth#scopes)):
-
-```
-$sh->installURL(['permissions' => array('write_orders', 'write_products')]);
-```
-
-You may also pass a redirect URL per the `redirect_uri` parameter [as described by the Shopify API Docs](http://docs.shopify.com/api/authentication/oauth#asking-for-permission)
-
-```
-$sh->installURL(['permissions' => array('write_orders', 'write_products'), 'redirect' => 'http://myapp.com/success']);
-```
-
-## Authentication / Getting OAuth Access Token
-In order to make Authenticated requests, [the Access Token must be passed as a header in each request](http://docs.shopify.com/api/authentication/oauth#making-authenticated-requests). This package will automatically do that for you, but you must first authenticate your app on each store (as the user installs it), and save the Access Token.
-
-Once the user accesses the Install URL and clicks the Install button, they will be redirected back to your app with data in the Query String.
-
-After setting up with at least `SHOP_DOMAIN`, `API_KEY`, & `API_SECRET`, call `getAccessToken()` with the code passed back in the URL. Laravel makes this easy:
-
-```
-$code = Input::get('code');
-$sh = App::make('ShopifyAPI', ['API_KEY' => '', 'API_SECRET' => '', 'SHOP_DOMAIN' => '']);
-
-try
-{
-	$accessToken = $sh->getAccessToken($code);
-}
-catch (Exception $e)
-{
-	echo '<pre>Error: ' . $e->getMessage() . '</pre>';
-}
-
-// Save $accessToken
-```
 
 #### Verifying OAuth Data
 Shopify returns a hashed value to validate the data against. To validate (recommended before calling `getAccessToken()`), utilize `verifyRequest()`.
