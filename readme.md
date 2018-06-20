@@ -79,8 +79,20 @@ SHOPIFY_APP_REDIRECT=https://example.com/oauth
 SHOPIFY_EMAIL_NOTICE=example@cottonbabies.com
  ```
 
-<!---
- To begin, use `App::make()` to grab an instance of the `API` class.
+## Quick Install
+
+First make sure you run `php artisan migrate` from the server via SSH
+
+Use the existing helper install functionality to install the application quickly and easily. If you need more specific control over the install process refer to the Manual Install section.
+
+To install application on a store access /install and simply enter in the myshopify url.
+
+NOTE: Make sure /success is in the Whitelisted redirection URL(s) in Shopify App Settings.
+
+
+That's it! You're ready to make some API calls.
+
+To begin, use `App::make()` to grab an instance of the `API` class.
 
 ```
 $sh = App::make('ShopifyAPI');
@@ -98,20 +110,7 @@ Pass the setup array as the second argument in `App::make()`:
 ```
 $sh = App::make('ShopifyAPI', ['API_KEY' => '', 'API_SECRET' => '', 'SHOP_DOMAIN' => '', 'ACCESS_TOKEN' => '']);
 ``` 
--->
 
-## Quick Install
-
-First make sure you run `php artisan migrate` from the server via SSH
-
-Use the existing helper install functionality to install the application quickly and easily. If you need more specific control over the install process refer to the Manual Install section.
-
-To install application on a store access /install and simply enter in the myshopify url.
-
-NOTE: Make sure /success is in the Whitelisted redirection URL(s) in Shopify App Settings.
-
-
-That's it! You're ready to make some API calls.
 
 ## Finding the Install URL
 After setting up with at least `SHOP_DOMAIN` & `API_KEY`, call `installURL()` with an array of permissions ([the app's Scope](docs.shopify.com/api/authentication/oauth#scopes)):
