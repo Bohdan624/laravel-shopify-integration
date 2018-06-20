@@ -19,6 +19,8 @@ Example:
 	}
 ```
 
+Add to the end of `psr-4` section `"RocketCode\\Shopify\\": "Packages/shopify_api_wrapper/src"`
+
 Add `"repositories"` section at the end of the composer.json file
 
 Example:
@@ -41,10 +43,13 @@ Example:
 ```
 
 #### Add the Service Provider
-In `app/config/app.php`, add `RocketCode\Shopify\ShopifyServiceProvider::class,` to the end of the `providers` array.
+In `config/app.php`, add `RocketCode\Shopify\ShopifyServiceProvider::class,` to the end of the `providers` array.
 
 #### Composer dump-autoload
-Run `composer dump-autoload`
+SSH to the server, 
+then run from the project root the following commands
+`composer update`
+`composer dump-autoload` 
 
 #### Add the Middleware
 In `app/http/kernel.php`, add `'shopify.webhook' => \RocketCode\Shopify\VerifyShopifyWebhook::class` to the end of the `$routeMiddleware` array.
