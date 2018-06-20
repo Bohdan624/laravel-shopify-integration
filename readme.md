@@ -79,7 +79,8 @@ SHOPIFY_APP_REDIRECT=https://example.com/oauth
 SHOPIFY_EMAIL_NOTICE=example@cottonbabies.com
  ```
 
-<!-- To begin, use `App::make()` to grab an instance of the `API` class.
+<!---
+ To begin, use `App::make()` to grab an instance of the `API` class.
 
 ```
 $sh = App::make('ShopifyAPI');
@@ -96,7 +97,8 @@ Pass the setup array as the second argument in `App::make()`:
 
 ```
 $sh = App::make('ShopifyAPI', ['API_KEY' => '', 'API_SECRET' => '', 'SHOP_DOMAIN' => '', 'ACCESS_TOKEN' => '']);
-``` -->
+``` 
+-->
 
 ## Quick Install
 
