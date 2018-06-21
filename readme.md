@@ -393,6 +393,15 @@ foreach($shops as $domain => $access)
 
 ## Webhooks
 
+### Setting up routes
+
+Make sure to put the routes for saving the webhook files in the routes/api.php file
+
+```
+Route::post('webhook/orders/create', 'WebhookController@saveWebhooks');
+Route::post('webhook/save', 'WebhookController@saveWebhooks');
+```
+
 ### Creating Webhooks
 
 To create a webhook, use the API class' "createWebhook" function

@@ -67,7 +67,7 @@ class ShopifyController extends Controller
     {
         $myshopify_domain = $request->get('myshopify_domain');
         $this->shopSwitch($myshopify_domain, true);
-        $redirect = $this->sh->installURL(['permissions' => array('write_orders', 'write_products', 'write_content', 'read_content', 'write_customers', 'read_customers', 'write_draft_orders', 'read_draft_orders', 'read_checkouts', 'write_checkouts', 'read_shipping', 'write_shipping', 'read_reports', 'write_reports'), 'redirect' => secure_url('/success')]);
+        $redirect = $this->sh->installURL(['permissions' => array('write_orders', 'write_products', 'write_content', 'read_content', 'write_customers', 'read_customers', 'write_draft_orders', 'read_draft_orders', 'read_checkouts', 'write_checkouts', 'read_shipping', 'write_shipping', 'read_reports', 'write_reports', 'read_inventory', 'write_inventory'), 'redirect' => secure_url('/success')]);
         return redirect($redirect);
     }
     
