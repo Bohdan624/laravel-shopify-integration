@@ -776,6 +776,10 @@ class API
                     $this->shopifyData['PLURAL_NAME'] = 'orders';
                     $this->shopifyData['SINGULAR_NAME'] = 'order';
                     break;
+                case 'inventory_levels':
+                    $this->shopifyData['PLURAL_NAME'] = 'inventory_levels';
+                    $this->shopifyData['SINGULAR_NAME'] = 'inventory_level';
+                    break;
             }
     }
     
@@ -893,28 +897,35 @@ class API
                 // metafields requires a resource id and metafield id, therefore, we're setting the URL from where it's being called
                 $tempShopifyData['URL'] = $tempShopifyData['URL'];
                 break;
+            case 'inventory_levels':
+                $compare_property_name = 'inventory_item_ids';
+                $tempShopifyData['URL'] .= '?' . $compare_property_name . '=' . urlencode($compare_property_value);
+                break;
             default:
                 $compare_property_name = 'ids';
                 $tempShopifyData['URL'] .= '?' . $compare_property_name . '=' . urlencode($compare_property_value);
         }
         
         $result = $this->call($tempShopifyData);
-        if ((isset($result->$resource) && count($result->$resource) == 1) || $result->$resource_singular) {
+        if ((isset($result->$resource) && count($result->$resource) == 1) || property_exists($result, $resource_singular)) {
             // update the record
             $resource = $this->shopifyData['resource'];
             $currentShopifyData = $this->shopifyData;
             $currentShopifyData['METHOD'] = 'PUT';
 
             switch ($resource) {
-            case 'smart_collections':
-                // if smart_collections, determine whether to use order.json or #id.json
-                if (isset($currentShopifyData['DATA']) && array_has($currentShopifyData['DATA'], 'products')) {
-                    $currentShopifyData['URL'] = str_replace(".json", '/' . $id . '/order.json', $currentShopifyData['URL']);
-                }
-                break;
-            default:
-                $currentShopifyData['URL'] = self::PREFIX . '/' . $resource . '/' . $id . '.json';
-        }
+                case 'smart_collections':
+                    // if smart_collections, determine whether to use order.json or #id.json
+                    if (isset($currentShopifyData['DATA']) && array_has($currentShopifyData['DATA'], 'products')) {
+                        $currentShopifyData['URL'] = str_replace(".json", '/' . $id . '/order.json', $currentShopifyData['URL']);
+                    }
+                    break;
+                case 'inventory_levels':
+                    $currentShopifyData['URL'] = str_replace(".json", '/set.json', $currentShopifyData['URL']);
+                    break;
+                default:
+                    $currentShopifyData['URL'] = self::PREFIX . '/' . $resource . '/' . $id . '.json';
+            }
 
 
             if (isset($currentShopifyData['DATA'])) {
@@ -1437,4 +1448,32 @@ class API
     {
         return $this->_API['SHOP_DOMAIN'];
     }
+
+    /**
+     * Updates the a variant's quantity by getting the location id first, then updating it using the new API
+     * @param $inventory_item_id
+     */
+    public function updateVariantQuantity($inventory_item_id, $quantity)
+    {
+        // get the location_id
+        $result = false;
+        $resource = 'inventory_levels';
+        $url_filters = ['ids', $inventory_item_id];
+        $this->addCallData('resource', $resource);
+        $this->addCallData('URL', 'admin/' . $resource);
+        foreach ($url_filters as $filter => $value) {
+            $this->addUrlFilter($filter, $value);
+        }
+        $result = $this->listShopifyResources();
+        $inventory_item = reset($result->inventory_levels);
+        // set the new quantity
+        $this->addCallData('resource', $resource);
+        $this->shopifyData['URL'] = 'admin/' . $resource . '/set.json';
+        $this->addData('inventory_item_id', $inventory_item_id);
+        $this->addData('location_id', $inventory_item->location_id);
+        $this->addData('available', $quantity);
+        $result = $this->updateRecord($inventory_item_id);
+        return $result;
+    }
+    
 } // End of API class
