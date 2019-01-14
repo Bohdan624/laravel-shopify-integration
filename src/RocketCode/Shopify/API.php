@@ -1475,5 +1475,28 @@ class API
         $result = $this->updateRecord($inventory_item_id);
         return $result;
     }
-    
+
+    public function getResourceComponent($resource, $component, $resourceId, $urlFilters)
+    {
+        $this->addCallData('resource', $resource);
+        $this->addCallData('URL', self::PREFIX . '/' . $resource . '/' . $resourceId . '/' . $component);
+        foreach ($urlFilters as $filter => $value) {
+            $this->addUrlFilter($filter, $value);
+        }
+        $transactions = $this->listShopifyResources();
+        $transactions = reset($transactions);
+        return $transactions;
+    }
+
+    public function createResourceComponent($resource, $component, $resourceId, $newComponentData)
+    {
+        $this->addCallData('resource', $resource);
+        $this->addCallData('URL', self::PREFIX . '/' . $resource . '/' . $resourceId . '/' . $component);
+        foreach ($newComponentData as $property => $data) {
+            $this->buildChildData($property, $data);
+        }
+        $this->commitChildData();
+        return $this->createRecord();
+    }
+
 } // End of API class
