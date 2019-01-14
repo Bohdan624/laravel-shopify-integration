@@ -733,54 +733,74 @@ class API
         unset($this->shopifyData);
     }
 
+    public function getSingularAndPluralName($resource)
+    {
+        $retVal = [
+            'PLURAL_NAME' => '',
+            'SINGULAR_NAME' => ''
+        ];
+        switch ($resource) {
+            case 'products':
+                $retVal['PLURAL_NAME'] = $resource;
+                $retVal['SINGULAR_NAME'] = 'product';
+                break;
+            case 'variants':
+                $retVal['PLURAL_NAME'] = $resource;
+                $retVal['SINGULAR_NAME'] = 'variant';
+                break;
+            case 'custom_collections':
+                $retVal['PLURAL_NAME'] = 'custom_collections';
+                $retVal['SINGULAR_NAME'] = 'custom_collection';
+                break;
+            case 'smart_collections':
+                $retVal['PLURAL_NAME'] = 'smart_collections';
+                $retVal['SINGULAR_NAME'] = 'smart_collection';
+                break;
+            case 'collects':
+                $retVal['PLURAL_NAME'] = 'collects';
+                $retVal['SINGULAR_NAME'] = 'collect';
+                break;
+            case 'collections':
+                $retVal['PLURAL_NAME'] = 'collections';
+                $retVal['SINGULAR_NAME'] = 'collection';
+                break;
+            case 'metafields':
+                $retVal['PLURAL_NAME'] = 'metafields';
+                $retVal['SINGULAR_NAME'] = 'metafield';
+                break;
+            case 'customers':
+                $retVal['PLURAL_NAME'] = 'customers';
+                $retVal['SINGULAR_NAME'] = 'customer';
+                break;
+            case 'orders':
+                $retVal['PLURAL_NAME'] = 'orders';
+                $retVal['SINGULAR_NAME'] = 'order';
+                break;
+            case 'inventory_levels':
+                $retVal['PLURAL_NAME'] = 'inventory_levels';
+                $retVal['SINGULAR_NAME'] = 'inventory_level';
+                break;
+            case 'risks':
+                $retVal['PLURAL_NAME'] = 'risks';
+                $retVal['SINGULAR_NAME'] = 'risk';
+                break;
+            case 'transactions':
+                $retVal['PLURAL_NAME'] = 'transactions';
+                $retVal['SINGULAR_NAME'] = 'transaction';
+                break;
+        }
+        return $retVal;
+    }
+
     /**
      * Sets the singular and plural names for the resource
      * @param string $resource The resource name
      */
     public function setSingularAndPluralName($resource)
     {
-        switch ($resource) {
-                case 'products':
-                    $this->shopifyData['PLURAL_NAME'] = $resource;
-                    $this->shopifyData['SINGULAR_NAME'] = 'product';
-                    break;
-                case 'variants':
-                    $this->shopifyData['PLURAL_NAME'] = $resource;
-                    $this->shopifyData['SINGULAR_NAME'] = 'variant';
-                    break;
-                case 'custom_collections':
-                    $this->shopifyData['PLURAL_NAME'] = 'custom_collections';
-                    $this->shopifyData['SINGULAR_NAME'] = 'custom_collection';
-                    break;
-                case 'smart_collections':
-                    $this->shopifyData['PLURAL_NAME'] = 'smart_collections';
-                    $this->shopifyData['SINGULAR_NAME'] = 'smart_collection';
-                    break;
-                case 'collects':
-                    $this->shopifyData['PLURAL_NAME'] = 'collects';
-                    $this->shopifyData['SINGULAR_NAME'] = 'collect';
-                    break;
-                case 'collections':
-                    $this->shopifyData['PLURAL_NAME'] = 'collections';
-                    $this->shopifyData['SINGULAR_NAME'] = 'collection';
-                    break;
-                case 'metafields':
-                    $this->shopifyData['PLURAL_NAME'] = 'metafields';
-                    $this->shopifyData['SINGULAR_NAME'] = 'metafield';
-                    break;
-                case 'customers':
-                    $this->shopifyData['PLURAL_NAME'] = 'customers';
-                    $this->shopifyData['SINGULAR_NAME'] = 'customer';
-                    break;
-                case 'orders':
-                    $this->shopifyData['PLURAL_NAME'] = 'orders';
-                    $this->shopifyData['SINGULAR_NAME'] = 'order';
-                    break;
-                case 'inventory_levels':
-                    $this->shopifyData['PLURAL_NAME'] = 'inventory_levels';
-                    $this->shopifyData['SINGULAR_NAME'] = 'inventory_level';
-                    break;
-            }
+        $names = $this->getSingularAndPluralName($resource);
+        $this->shopifyData['PLURAL_NAME'] = $names['PLURAL_NAME'];
+        $this->shopifyData['SINGULAR_NAME'] = $names['SINGULAR_NAME'];
     }
     
     /**
@@ -1492,8 +1512,9 @@ class API
     {
         $this->addCallData('resource', $resource);
         $this->addCallData('URL', self::PREFIX . '/' . $resource . '/' . $resourceId . '/' . $component);
+        $componentNames = $this->getSingularAndPluralName($component);
         foreach ($newComponentData as $property => $data) {
-            $this->buildChildData($property, $data);
+            $this->buildChildData($property, $data, $componentNames['SINGULAR_NAME']);
         }
         $this->commitChildData();
         return $this->createRecord();
