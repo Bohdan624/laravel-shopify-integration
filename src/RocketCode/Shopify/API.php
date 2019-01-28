@@ -1522,8 +1522,8 @@ class API
 
     public function resourceExists($resource, $resourceId)
     {
-        $resource = $this->getResource($resource, ['ids' => $resourceId], 'list');
-        return !empty($resource->$resource);
+        $resourceSingle = $this->getResource($resource, ['ids' => $resourceId], 'list');
+        return !empty($resourceSingle->$resource);
     }
 
 } // End of API class
