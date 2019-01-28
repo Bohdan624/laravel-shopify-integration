@@ -1520,4 +1520,10 @@ class API
         return $this->createRecord();
     }
 
+    public function resourceExists($resource, $resourceId)
+    {
+        $resource = $this->getResource($resource, ['ids' => $resourceId], 'list');
+        return !empty($resource->$resource);
+    }
+
 } // End of API class
