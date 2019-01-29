@@ -4,6 +4,7 @@ Laravel / Shopify API Wrapper
 An easy-to-use PHP package to communicate with [Shopify's API](http://docs.shopify.com/api) in Laravel.
 
 ## Installation
+#### Make sure to download the .env file from the server before starting
 #### Require rocket-code/shopify-cottonbabies in `composer.json`
 
 Add `"rocket-code/shopify-cottonbabies": "~1.0"` in your "require" object.  
@@ -18,6 +19,8 @@ Example:
 		"rocket-code/shopify-cottonbabies": "~1.0"
 	}
 ```
+
+Add to the end of `psr-4` section `"RocketCode\\Shopify\\": "Packages/shopify_api_wrapper/src"`
 
 Add `"repositories"` section at the end of the composer.json file
 
@@ -41,32 +44,54 @@ Example:
 ```
 
 #### Add the Service Provider
-In `app/config/app.php`, add `RocketCode\Shopify\ShopifyServiceProvider::class,` to the end of the `providers` array.
+In `config/app.php`, add `RocketCode\Shopify\ShopifyServiceProvider::class,` to the end of the `providers` array.
 
 #### Composer dump-autoload
-Run `composer dump-autoload`
+SSH to the server, 
+then run from the project root the following commands
+`composer update`
+`composer dump-autoload` 
 
 #### Add the Middleware
 In `app/http/kernel.php`, add `'shopify.webhook' => \RocketCode\Shopify\VerifyShopifyWebhook::class` to the end of the `$routeMiddleware` array.
 
+### Setting up the shopify App
+From the App Setup page add `domain/success` to the whitelisted redirection URL(s) section and save it
+
 ## Setting Up
+
+Get the necessary 'ID', 'SECRET' from the partners.shopify.com for this app (create the app if necessary)
 
 In `.env`, add these Four entries:
  
  * `SHOPIFY_APP_ID` with your Shopify App *API key*
  * `SHOPIFY_APP_SECRET` with your Shopify App *Secret* (which, for private apps, is not the same as the *Password*)
- * `SHOPIFY_APP_REDIRECT` with your whitelisted redirection URL, in case you are a pubblic app using OAuth
-
  * `SHOPIFY_EMAIL_NOTICE` with your email address to receive notices
- 
+
  Example:
  
  ```
 SHOPIFY_APP_ID=000102030405060708090a0b0c0d0e0f
+
 SHOPIFY_APP_SECRET=101112131415161718191a1b1c1d1e1f
+
 SHOPIFY_APP_REDIRECT=https://example.com/oauth
+
 SHOPIFY_EMAIL_NOTICE=example@cottonbabies.com
  ```
+
+## Quick Install
+
+First make sure you run `php artisan migrate` from the server via SSH
+
+Use the existing helper install functionality to install the application quickly and easily. If you need more specific control over the install process refer to the Manual Install section.
+
+To install application on a store access /install and simply enter in the myshopify url.
+
+NOTE: Make sure /success is in the Whitelisted redirection URL(s) in Shopify App Settings.
+
+
+That's it! You're ready to make some API calls.
 
 To begin, use `App::make()` to grab an instance of the `API` class.
 
@@ -85,6 +110,8 @@ Pass the setup array as the second argument in `App::make()`:
 
 ```
 $sh = App::make('ShopifyAPI', ['API_KEY' => '', 'API_SECRET' => '', 'SHOP_DOMAIN' => '', 'ACCESS_TOKEN' => '']);
+``` 
+
 ```
 
 ## Quick Install
@@ -411,6 +438,15 @@ foreach($shops as $domain => $access)
 
 
 ## Webhooks
+
+### Setting up routes
+
+Make sure to put the routes for saving the webhook files in the routes/api.php file
+
+```
+Route::post('webhook/orders/create', 'WebhookController@saveWebhooks');
+Route::post('webhook/save', 'WebhookController@saveWebhooks');
+```
 
 ### Creating Webhooks
 
